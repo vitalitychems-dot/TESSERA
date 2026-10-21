@@ -12,7 +12,7 @@ import {
 import { db } from "@workspace/db";
 import { vectorEmbeddingsTable, decisionHistoryTable } from "@workspace/db/schema";
 import { desc, eq } from "drizzle-orm";
-import { validateMeshToken } from "../lib/mesh-auth";
+import { getOwnerSessionKeyHash } from "../lib/sovereign-admin";
 import { meshBroadcast } from "../lib/mesh-bus";
 
 const router: IRouter = Router();
@@ -84,9 +84,7 @@ router.post("/memory/store", async (req, res) => {
     }
     const id = await storeMemory({ content: content.trim(), source, category, metadata });
 
-    const rawToken = req.headers["x-admin-token"];
-    const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
-    const keyHash = validateMeshToken(token ?? "");
+    const keyHash = getOwnerSessionKeyHash(req);
     if (keyHash) {
       meshBroadcast(keyHash, "memory:stored", {
         id,
@@ -160,9 +158,7 @@ router.post("/memory/decisions", async (req, res) => {
     }
     const id = await logDecision({ action, category, rationale, context, outcome, significance, source, sessionId });
 
-    const rawToken = req.headers["x-admin-token"];
-    const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
-    const keyHash = validateMeshToken(token ?? "");
+    const keyHash = getOwnerSessionKeyHash(req);
     if (keyHash) {
       meshBroadcast(keyHash, "memory:decision-logged", {
         id,

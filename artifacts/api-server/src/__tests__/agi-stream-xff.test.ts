@@ -3,11 +3,13 @@ import express from "express";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import { createAgiStreamRouter } from "../routes/agi-stream";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 
 const KEY = "test-admin-key-0123456789abcdef";
 let prevKey: string | undefined;
-beforeAll(() => { prevKey = process.env.TESSERACT_ADMIN_KEY; process.env.TESSERACT_ADMIN_KEY = KEY; });
-afterAll(() => { if (prevKey === undefined) delete process.env.TESSERACT_ADMIN_KEY; else process.env.TESSERACT_ADMIN_KEY = prevKey; });
+let prevSession: string | undefined;
+beforeAll(() => { prevKey = process.env.TESSERACT_ADMIN_KEY; prevSession = process.env.SOVEREIGN_SESSION_SECRET; process.env.TESSERACT_ADMIN_KEY = KEY; process.env.SOVEREIGN_SESSION_SECRET = "synthetic-agi-xff-session-secret-32chars"; });
+afterAll(() => { if (prevKey === undefined) delete process.env.TESSERACT_ADMIN_KEY; else process.env.TESSERACT_ADMIN_KEY = prevKey; if (prevSession === undefined) delete process.env.SOVEREIGN_SESSION_SECRET; else process.env.SOVEREIGN_SESSION_SECRET = prevSession; });
 
 // Mirrors app.ts: app.set("trust proxy", 1) with no proxy actually in front.
 async function start(opts: Record<string, unknown>) {
@@ -19,7 +21,7 @@ async function start(opts: Record<string, unknown>) {
   return { server, url: `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/agi/stream` };
 }
 const open = (url: string, xff: string, ac: AbortController) =>
-  fetch(url, { headers: { "x-tesseract-admin-key": KEY, "x-forwarded-for": xff }, signal: ac.signal });
+  fetch(url, { headers: { cookie: `${SESSION_COOKIE}=${issueSession({ ip: "127.0.0.1", userAgent: "vitest" }).signedId}`, "x-forwarded-for": xff }, signal: ac.signal });
 
 describe("/api/agi/stream per-IP cap vs X-Forwarded-For", () => {
   it("forged XFF from an untrusted peer still counts against the socket IP", async () => {

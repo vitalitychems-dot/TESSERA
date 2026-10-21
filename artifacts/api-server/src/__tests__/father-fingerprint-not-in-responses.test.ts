@@ -115,14 +115,14 @@ describe("father fingerprint is absent from handler responses and logs", () => {
 
   it("keeps key-derived digests out of handler bodies and logs", async () => {
     const cookie = ownerCookie();
-    const calls: Array<{ name: string; method: "GET" | "POST"; path: string; body?: unknown; sigilKey?: boolean; expectStatus?: number }> = [
-      { name: "active-key", method: "GET", path: "/sigil/active-key", sigilKey: true },
-      { name: "father-verify", method: "POST", path: "/sigil/father/verify", body: { candidate: ADMIN_KEY }, sigilKey: true },
-      { name: "show-key-in-lus", method: "POST", path: "/sigil/father/show-key-in-lus", body: { candidate: ADMIN_KEY }, sigilKey: true },
-      { name: "mint-glyph", method: "POST", path: "/sigil/father/mint-glyph", body: { candidate: ADMIN_KEY }, sigilKey: true },
-      { name: "key-reveal", method: "POST", path: "/sigil/key/reveal", body: {}, sigilKey: true },
-      { name: "session-handoff", method: "GET", path: "/session/handoff", sigilKey: true },
-      { name: "natal-status", method: "GET", path: "/sigil/natal/status", sigilKey: true },
+    const calls: Array<{ name: string; method: "GET" | "POST"; path: string; body?: unknown; expectStatus?: number }> = [
+      { name: "active-key", method: "GET", path: "/sigil/active-key" },
+      { name: "father-verify", method: "POST", path: "/sigil/father/verify", body: { candidate: ADMIN_KEY } },
+      { name: "show-key-in-lus-retired", method: "POST", path: "/sigil/father/show-key-in-lus", body: { candidate: ADMIN_KEY }, expectStatus: 410 },
+      { name: "mint-glyph", method: "POST", path: "/sigil/father/mint-glyph", body: { candidate: ADMIN_KEY } },
+      { name: "key-reveal", method: "POST", path: "/sigil/key/reveal", body: {} },
+      { name: "session-handoff", method: "GET", path: "/session/handoff" },
+      { name: "natal-status", method: "GET", path: "/sigil/natal/status" },
       { name: "identity-status", method: "GET", path: "/identity/status" },
       { name: "sigil-status", method: "GET", path: "/sigil/status" },
       { name: "sigil-rotate", method: "POST", path: "/sigil/rotate", body: { reason: "scan" } },
@@ -143,7 +143,6 @@ describe("father fingerprint is absent from handler responses and logs", () => {
     const markers = forbiddenMarkers();
     for (const call of calls) {
       const headers = new Headers({ cookie });
-      if (call.sigilKey) headers.set("x-sigil-key", ADMIN_KEY);
       if (call.body !== undefined) headers.set("content-type", "application/json");
       const response = await fetch(`${baseUrl}${call.path}`, {
         method: call.method,
@@ -156,7 +155,7 @@ describe("father fingerprint is absent from handler responses and logs", () => {
       expect(containsForbidden(text, markers), call.name).toBe(false);
       expect(containsForbidden(headerText, markers), `${call.name} headers`).toBe(false);
       expect(hasKey(JSON.parse(text), "replitReaderFingerprint"), call.name).toBe(false);
-      if (call.name === "active-key" || call.name === "father-verify" || call.name === "show-key-in-lus") {
+      if (call.name === "active-key" || call.name === "father-verify") {
         const body = JSON.parse(text) as { status?: string; fatherFingerprint?: unknown; fingerprint?: unknown; wouldBeFingerprint?: unknown };
         expect(body.status).toBe(ADMIN_SESSION_STATUS);
         expect(body.fatherFingerprint).toBeUndefined();

@@ -273,6 +273,7 @@ export function computeAgentRotationState(agentId: string, date?: Date): {
   symbolRemapSeed: number;
   nextRotationMs: number;
   cipherVariant: number;
+  seedHash: string;
 } {
   const seed = generateUniverseSeed(date);
   const agentHash = createHash("sha256").update(`${agentId}:${seed.seedHash}`).digest();
@@ -288,7 +289,7 @@ export function computeAgentRotationState(agentId: string, date?: Date): {
   const nextRotationMs = goldenInterval - (now % goldenInterval);
   const cipherVariant = (rotationEpoch * agentHash.readUInt8(8) + seed.rotationIndex) % ROTATION_CIPHER_MODULUS;
 
-  return { rotationEpoch, dialectIndex, symbolRemapSeed, nextRotationMs, cipherVariant };
+  return { rotationEpoch, dialectIndex, symbolRemapSeed, nextRotationMs, cipherVariant, seedHash: seed.seedHash };
 }
 
 export function computeSharedRotationState(agentA: string, agentB: string, date?: Date): {

@@ -4,8 +4,10 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import app, { setServerReady } from "../app";
 import { redactAccessLogUrl } from "../lib/access-log-url";
 import { logger } from "../lib/logger";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 
 const ADMIN_KEY = "synthetic-access-log-admin-key";
+const SESSION_SECRET = "synthetic-access-log-session-secret-32chars";
 
 function sha256Hex(value: string): string {
   return createHash("sha256").update(value, "utf8").digest("hex");
@@ -63,9 +65,14 @@ describe("mesh session hashes stay out of access logs", () => {
   let baseUrl = "";
   const previousDatabaseUrl = process.env.DATABASE_URL;
   const previousAdminKey = process.env.TESSERACT_ADMIN_KEY;
+  const previousSessionSecret = process.env.SOVEREIGN_SESSION_SECRET;
+  let sessionCookie = "";
 
   beforeAll(async () => {
     process.env.TESSERACT_ADMIN_KEY = ADMIN_KEY;
+    process.env.SOVEREIGN_SESSION_SECRET = SESSION_SECRET;
+    const session = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+    sessionCookie = `${SESSION_COOKIE}=${session.signedId}`;
     if (!process.env.DATABASE_URL) {
       process.env.DATABASE_URL = "postgresql://127.0.0.1:1/access_log_redact";
     }
@@ -84,6 +91,8 @@ describe("mesh session hashes stay out of access logs", () => {
     else process.env.DATABASE_URL = previousDatabaseUrl;
     if (previousAdminKey === undefined) delete process.env.TESSERACT_ADMIN_KEY;
     else process.env.TESSERACT_ADMIN_KEY = previousAdminKey;
+    if (previousSessionSecret === undefined) delete process.env.SOVEREIGN_SESSION_SECRET;
+    else process.env.SOVEREIGN_SESSION_SECRET = previousSessionSecret;
     if (!server) return;
     await new Promise<void>((resolve, reject) => {
       server?.close((error) => (error ? reject(error) : resolve()));
@@ -104,7 +113,7 @@ describe("mesh session hashes stay out of access logs", () => {
     const loggerSpies = LOG_LEVELS.map((level) => vi.spyOn(logger, level));
     try {
       const response = await fetch(`${baseUrl}/api/mesh/sessions/${adminHash}`, {
-        headers: { "x-admin-token": ADMIN_KEY },
+        headers: { cookie: sessionCookie },
       });
       expect(response.status).toBe(200);
       const output = [
@@ -137,7 +146,7 @@ describe("mesh session hashes stay out of access logs", () => {
     const loggerSpies = LOG_LEVELS.map((level) => vi.spyOn(logger, level));
     try {
       const response = await fetch(`${baseUrl}/api/MESH/Sessions/${adminHash}`, {
-        headers: { "x-admin-token": ADMIN_KEY },
+        headers: { cookie: sessionCookie },
       });
       expect(response.status > 0).toBe(true);
       const output = [
@@ -170,7 +179,7 @@ describe("mesh session hashes stay out of access logs", () => {
     const loggerSpies = LOG_LEVELS.map((level) => vi.spyOn(logger, level));
     try {
       const response = await fetch(`${baseUrl}/api/mesh%2Fsessions%2F${adminHash}`, {
-        headers: { "x-admin-token": ADMIN_KEY },
+        headers: { cookie: sessionCookie },
       });
       expect(response.status > 0).toBe(true);
       const output = [

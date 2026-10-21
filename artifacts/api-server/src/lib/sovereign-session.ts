@@ -1,9 +1,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Sovereign Session — minted by Heavy Council (Apr 2026), proposals P1/P2/P9.
 //
-// One credential, one session, no rotation theatre. The operator presents
-// TESSERACT_ADMIN_KEY once; the server issues an HMAC-signed opaque session
-// id, stored in an HttpOnly cookie. All privileged routes accept ONLY this
+// One admin credential, one session. The operator presents TESSERACT_ADMIN_KEY
+// once; the server issues an HMAC-signed opaque session id stored in an
+// HttpOnly cookie. Production cookie signatures use the separate server-only
+// SOVEREIGN_SESSION_SECRET. All privileged browser routes accept ONLY this
 // cookie via requireAdminSession.
 //
 // Design rules:
@@ -46,7 +47,8 @@ const _store = new Map<string, SessionRecord>();
 let _evictionCount = 0;
 let _pruneCount = 0;
 
-// One admin secret: TESSERACT_ADMIN_KEY. No second env var is consulted.
+// The admin login credential is TESSERACT_ADMIN_KEY. Session signing uses the
+// separate server-only secret described above; it is never accepted as login.
 function getAdminToken(): string {
   return (process.env.TESSERACT_ADMIN_KEY ?? "").trim();
 }
@@ -71,6 +73,14 @@ export function getSessionSecret(): string {
     return ""; // empty secret => signSessionId returns "" => issueSession effectively fails closed
   }
   return getAdminToken();
+}
+
+/** True only when this process can produce and verify nonempty session signatures. */
+export function isSessionSigningConfigured(): boolean {
+  if (process.env.NODE_ENV === "production") {
+    return getSessionSecret().length >= 32;
+  }
+  return getSessionSecret().length >= 16;
 }
 
 export function isAdminTokenConfigured(): boolean {
@@ -130,6 +140,9 @@ export interface IssuedSession {
 export function issueSession(opts: IssueOpts): IssuedSession {
   if (!isAdminTokenConfigured()) {
     throw new Error("sovereign-admin-token-not-configured");
+  }
+  if (!isSessionSigningConfigured()) {
+    throw new Error("sovereign-session-signing-secret-not-configured");
   }
   const ttlMs = Math.max(60_000, opts.ttlMs ?? DEFAULT_TTL_MS);
   const rawId = randomBytes(32).toString("hex");

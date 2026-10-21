@@ -6,19 +6,13 @@ import {
   listStrategies,
   setAutoHealerEnabled,
 } from "../lib/auto-healer";
-import { validateSovereignAdminToken } from "../lib/mesh-auth";
+import { requireAdminSession } from "../lib/sovereign-admin";
 import { rawKeyFailRateLimit } from "../lib/father-verify-throttle";
 
 const router: IRouter = Router();
 
 const rateLimit = { last: 0, windowMs: 20_000 };
-function requireSovereignAuth(req: Request, res: Response, next: NextFunction): void {
-  const rawToken = req.headers["x-admin-token"];
-  const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
-  if (!validateSovereignAdminToken(token)) {
-    res.status(401).json({ ok: false, error: "Valid TESSERACT_ADMIN_KEY required — manual healing is privileged" });
-    return;
-  }
+function rateLimitManualHealing(_req: Request, res: Response, next: NextFunction): void {
   const now = Date.now();
   if (now - rateLimit.last < rateLimit.windowMs) {
     res.status(429).json({ ok: false, error: "Healing sweep rate-limited; autonomous sweeps run every 45s." });
@@ -41,12 +35,12 @@ router.get("/auto-healer/strategies", (_req, res) => {
   res.json({ ok: true, strategies: listStrategies() });
 });
 
-router.post("/auto-healer/sweep", rawKeyFailRateLimit, requireSovereignAuth, async (_req, res) => {
+router.post("/auto-healer/sweep", requireAdminSession, rawKeyFailRateLimit, rateLimitManualHealing, async (_req, res) => {
   const incidents = await runHealingSweep({ manual: true });
   res.json({ ok: true, incidents, stats: getHealingStats() });
 });
 
-router.post("/auto-healer/enabled", rawKeyFailRateLimit, requireSovereignAuth, (req, res) => {
+router.post("/auto-healer/enabled", requireAdminSession, rawKeyFailRateLimit, rateLimitManualHealing, (req, res) => {
   const on = Boolean(req.body?.enabled);
   setAutoHealerEnabled(on);
   res.json({ ok: true, enabled: on });

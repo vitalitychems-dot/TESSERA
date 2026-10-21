@@ -3,8 +3,7 @@ import { Readable } from "stream";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { ObjectPermission } from "../lib/objectAcl";
-import { validateSovereignAdminToken } from "../lib/mesh-auth";
-import { rawKeyFailRateLimit } from "../lib/father-verify-throttle";
+import { requireAdminSession } from "../lib/sovereign-admin";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -15,25 +14,7 @@ const RequestUploadUrlBody = z.object({
   contentType: z.string().min(1).max(128).optional(),
 });
 
-router.post("/storage/uploads/request-url", rawKeyFailRateLimit, async (req: Request, res: Response) => {
-  // Gate: require an admin token to mint signed upload URLs (prevents
-  // unauthenticated callers from generating arbitrary writes / cost abuse).
-  const configured = process.env["TESSERACT_ADMIN_KEY"];
-  if (!configured || configured.length < 8) {
-    res.status(503).json({
-      error: "TESSERACT_ADMIN_KEY is not configured. Storage upload URLs are disabled until the secret is set.",
-    });
-    return;
-  }
-  const token = (req.headers["x-admin-token"] as string | undefined)?.trim();
-  if (!token || token.length < 8) {
-    res.status(401).json({ error: "Admin token required to mint upload URLs" });
-    return;
-  }
-  if (!validateSovereignAdminToken(token)) {
-    res.status(401).json({ error: "Invalid admin token" });
-    return;
-  }
+router.post("/storage/uploads/request-url", requireAdminSession, async (req: Request, res: Response) => {
   const parsed = RequestUploadUrlBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Missing or invalid required fields" });

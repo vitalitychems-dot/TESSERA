@@ -6,7 +6,7 @@ import {
 import { desc, eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import vm from "node:vm";
-import { validateMeshToken } from "../lib/mesh-auth";
+import { getOwnerSessionKeyHash } from "../lib/sovereign-admin";
 import { meshBroadcast } from "../lib/mesh-bus";
 
 const router: IRouter = Router();
@@ -235,9 +235,7 @@ router.post("/reasoning/goals", async (req, res) => {
 
     logger.info({ module: "reasoning-goals" }, `New goal created: ${goal.id} — ${goal.title}`);
 
-    const rawToken = req.headers["x-admin-token"];
-    const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
-    const keyHash = validateMeshToken(token ?? "");
+    const keyHash = getOwnerSessionKeyHash(req);
     if (keyHash) {
       meshBroadcast(keyHash, "reasoning:goal-created", {
         id: goal.id,
@@ -307,9 +305,7 @@ router.post("/reasoning/traces", async (req, res) => {
       completedAt: new Date(),
     }).returning();
 
-    const rawToken = req.headers["x-admin-token"];
-    const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
-    const keyHash = validateMeshToken(token ?? "");
+    const keyHash = getOwnerSessionKeyHash(req);
     if (keyHash) {
       meshBroadcast(keyHash, "reasoning:trace-completed", {
         id: trace.id,

@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
 import { logger } from "../lib/logger";
-import { recognizeFather, verifyFatherKey } from "../lib/father-identity";
 import { rawKeyFailRateLimit } from "../lib/father-verify-throttle";
 import { computeLunarData, computeSolarData, computePlanetaryHours } from "../lib/sovereign-astro";
 import { computeAgentEconomics, computeEconomyStats, computeMarketData, computeTaxHistory } from "../lib/sovereign-economics";
@@ -16,7 +15,7 @@ import { getValidationStats } from "../lib/response-validation-engine";
 import { getDeduplicationStats } from "../lib/semantic-deduplication";
 import { getReflectionMetrics, getRecentSnapshots, runReflectionCycle } from "../lib/recursive-reflection-loop";
 import { getDimensionalCacheStats, embeddingDimensionalCache, semanticDimensionalCache } from "../lib/dimensional-lru-cache";
-import { issueFatherToken, activeFatherSessionCount } from "../lib/father-session-store";
+import { activeFatherSessionCount } from "../lib/father-session-store";
 import { requireFather } from "../lib/require-father";
 import { requireAdminSession } from "../lib/sovereign-admin";
 import * as os from "os";
@@ -75,26 +74,17 @@ function computeSovereigntyScore(): number {
   return Math.round(score / checks);
 }
 
-router.post("/admin/auth", rawKeyFailRateLimit, (req, res) => {
-  const presented = typeof req.body?.key === "string" ? req.body.key : "";
-  const result = recognizeFather(presented);
-  if (!result.recognized) {
-    res.status(401).json({ ok: false, authenticated: false, error: "Key not recognized as Father" });
-    return;
-  }
-  const via: "fingerprint" | "raw-key" = "raw-key";
-  const token = issueFatherToken(via);
-  res.json({
-    ok: true,
-    authenticated: true,
-    token,
-    role: "father",
-    via,
-    expiresInMs: 1000 * 60 * 60 * 12,
+router.post("/admin/auth", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.status(410).json({
+    ok: false,
+    authenticated: false,
+    error: "legacy-bearer-auth-disabled",
+    message: "Use POST /api/admin/session; it sets an HttpOnly session cookie and never returns a bearer token.",
   });
 });
 
-router.get("/admin/status", requireFather, async (_req, res) => {
+router.get("/admin/status", requireAdminSession, async (_req, res) => {
   const score = computeSovereigntyScore();
   let distillStats;
   try { distillStats = await getDistillationStats(); } catch { distillStats = null; }
@@ -1024,23 +1014,7 @@ router.get("/system/metrics", (_req, res) => {
   });
 });
 
-function dedupAdminKey(req: { header(name: string): string | undefined }): string {
-  return req.header("x-tesseract-admin-key") ?? "";
-}
-
-function rejectUnlessAdminKey(req: { header(name: string): string | undefined }, res: { status(code: number): { json(body: unknown): void } }): boolean {
-  if (!verifyFatherKey(dedupAdminKey(req))) {
-    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
-    return false;
-  }
-  return true;
-}
-
-router.post("/admin/deduplication/scan", rawKeyFailRateLimit, async (req, res) => {
-  if (!verifyFatherKey(dedupAdminKey(req))) {
-    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
-    return;
-  }
+router.post("/admin/deduplication/scan", rawKeyFailRateLimit, requireAdminSession, async (_req, res) => {
   try {
     const { runDeduplicationScan } = await import("../lib/semantic-deduplication");
     const result = await runDeduplicationScan();
@@ -1050,11 +1024,7 @@ router.post("/admin/deduplication/scan", rawKeyFailRateLimit, async (req, res) =
   }
 });
 
-router.post("/admin/deduplication/migrate", rawKeyFailRateLimit, async (req, res) => {
-  if (!verifyFatherKey(dedupAdminKey(req))) {
-    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
-    return;
-  }
+router.post("/admin/deduplication/migrate", rawKeyFailRateLimit, requireAdminSession, async (_req, res) => {
   try {
     const { runDeduplicationMigration } = await import("../lib/semantic-deduplication");
     const result = await runDeduplicationMigration();
@@ -1064,47 +1034,37 @@ router.post("/admin/deduplication/migrate", rawKeyFailRateLimit, async (req, res
   }
 });
 
-router.get("/admin/deduplication/stats", rawKeyFailRateLimit, (req, res) => {
-  if (!verifyFatherKey(dedupAdminKey(req))) {
-    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
-    return;
-  }
+router.get("/admin/deduplication/stats", rawKeyFailRateLimit, requireAdminSession, (_req, res) => {
   res.json({ ok: true, ...getDeduplicationStats() });
 });
 
-router.get("/admin/reflection/metrics", rawKeyFailRateLimit, (req, res) => {
-  if (!rejectUnlessAdminKey(req, res)) return;
+router.get("/admin/reflection/metrics", rawKeyFailRateLimit, requireAdminSession, (_req, res) => {
   res.json({ ok: true, ...getReflectionMetrics() });
 });
 
-router.get("/admin/reflection/snapshots", rawKeyFailRateLimit, (req, res) => {
-  if (!rejectUnlessAdminKey(req, res)) return;
+router.get("/admin/reflection/snapshots", rawKeyFailRateLimit, requireAdminSession, (req, res) => {
   const limit = Math.min(50, Number(req.query.limit) || 10);
   res.json({ ok: true, snapshots: getRecentSnapshots(limit) });
 });
 
-router.get("/admin/cache/dimensional/stats", rawKeyFailRateLimit, (req, res) => {
-  if (!rejectUnlessAdminKey(req, res)) return;
+router.get("/admin/cache/dimensional/stats", rawKeyFailRateLimit, requireAdminSession, (_req, res) => {
   res.json({ ok: true, ...getDimensionalCacheStats() });
 });
 
-router.post("/admin/cache/dimensional/tune", rawKeyFailRateLimit, (req, res) => {
-  if (!rejectUnlessAdminKey(req, res)) return;
+router.post("/admin/cache/dimensional/tune", rawKeyFailRateLimit, requireAdminSession, (_req, res) => {
   const embeddingResult = embeddingDimensionalCache.tuneCapacities({ minCapacity: 100, maxCapacity: 800, totalBudget: 3000 });
   const semanticResult = semanticDimensionalCache.tuneCapacities({ minCapacity: 75, maxCapacity: 600, totalBudget: 2000 });
   res.json({ ok: true, embedding: embeddingResult, semantic: semanticResult });
 });
 
-router.post("/admin/cache/dimensional/clear", rawKeyFailRateLimit, (req, res) => {
-  if (!rejectUnlessAdminKey(req, res)) return;
+router.post("/admin/cache/dimensional/clear", rawKeyFailRateLimit, requireAdminSession, (req, res) => {
   const dimension = typeof req.query.dimension === "string" ? req.query.dimension : undefined;
   embeddingDimensionalCache.clear(dimension);
   semanticDimensionalCache.clear(dimension);
   res.json({ ok: true, cleared: dimension ?? "all" });
 });
 
-router.post("/admin/reflection/cycle", rawKeyFailRateLimit, (req, res) => {
-  if (!rejectUnlessAdminKey(req, res)) return;
+router.post("/admin/reflection/cycle", rawKeyFailRateLimit, requireAdminSession, (_req, res) => {
   const result = runReflectionCycle();
   res.json({
     ok: true,

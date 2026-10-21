@@ -378,22 +378,22 @@ describe("governance consensus owner gate", () => {
     expect(wrongType.text).not.toContain("hardeningLevel");
   });
 
-  it("drains the queue with a mesh token and rejects a missing token without an owner session", async () => {
+  it("drains the queue only with an owner session and rejects retired key headers", async () => {
     process.env[ADMIN_ENV] = SYNTHETIC_ADMIN_KEY;
 
     const missing = await send("POST", "/consensus/drain-queue");
     expect(missing.status).toBe(401);
-    expect(missing.json).toEqual(MESH_REJECTED);
+    expect(missing.json).toEqual(UNAUTHENTICATED);
 
     const wrong = await send("POST", "/consensus/drain-queue", { token: "not-the-mesh-token" });
     expect(wrong.status).toBe(401);
-    expect(wrong.json).toEqual(MESH_REJECTED);
+    expect(wrong.json).toEqual(UNAUTHENTICATED);
 
     const sessionOnly = await send("POST", "/consensus/drain-queue", { cookie: ownerCookie() });
-    expect(sessionOnly.status).toBe(401);
-    expect(sessionOnly.json).toEqual(MESH_REJECTED);
+    expect(sessionOnly.status).toBe(200);
+    expect((sessionOnly.json as { ok?: boolean }).ok).toBe(true);
 
-    const drained = await send("POST", "/consensus/drain-queue", { token: SYNTHETIC_ADMIN_KEY });
+    const drained = await send("POST", "/consensus/drain-queue", { cookie: ownerCookie() });
     expect(drained.status).toBe(200);
     const body = drained.json as { ok?: boolean; data?: { resolved?: unknown; deferred?: unknown; remaining?: unknown } };
     expect(body.ok).toBe(true);
@@ -405,8 +405,8 @@ describe("governance consensus owner gate", () => {
     delete process.env[ADMIN_ENV];
     try {
       const unconfigured = await send("POST", "/consensus/drain-queue", { token: SYNTHETIC_ADMIN_KEY });
-      expect(unconfigured.status).toBe(401);
-      expect(unconfigured.json).toEqual(MESH_REJECTED);
+      expect(unconfigured.status).toBe(503);
+      expect(unconfigured.json).toEqual(UNCONFIGURED);
     } finally {
       process.env[ADMIN_ENV] = saved;
     }

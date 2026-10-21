@@ -14,9 +14,11 @@ import {
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 
 const KEY = "test-admin-key-0123456789abcdef";
+const SESSION_SECRET = "synthetic-agi-stream-session-secret-32chars";
 let prevKey: string | undefined;
-beforeAll(() => { prevKey = process.env.TESSERACT_ADMIN_KEY; process.env.TESSERACT_ADMIN_KEY = KEY; });
-afterAll(() => { if (prevKey === undefined) delete process.env.TESSERACT_ADMIN_KEY; else process.env.TESSERACT_ADMIN_KEY = prevKey; });
+let prevSession: string | undefined;
+beforeAll(() => { prevKey = process.env.TESSERACT_ADMIN_KEY; prevSession = process.env.SOVEREIGN_SESSION_SECRET; process.env.TESSERACT_ADMIN_KEY = KEY; process.env.SOVEREIGN_SESSION_SECRET = SESSION_SECRET; });
+afterAll(() => { if (prevKey === undefined) delete process.env.TESSERACT_ADMIN_KEY; else process.env.TESSERACT_ADMIN_KEY = prevKey; if (prevSession === undefined) delete process.env.SOVEREIGN_SESSION_SECRET; else process.env.SOVEREIGN_SESSION_SECRET = prevSession; });
 
 async function start(o: Partial<AgiStreamOptions> = {}) {
   const app = express();
@@ -26,7 +28,10 @@ async function start(o: Partial<AgiStreamOptions> = {}) {
   const { port } = server.address() as AddressInfo;
   return { server, url: `http://127.0.0.1:${port}/api/agi/stream` };
 }
-const auth = { "x-tesseract-admin-key": KEY };
+const auth = () => {
+  const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+  return { cookie: `${SESSION_COOKIE}=${encodeURIComponent(issued.signedId)}` };
+};
 async function readUntil(res: Response, pred: (s: string) => boolean, ms = 3000) {
   const reader = res.body!.getReader(); const dec = new TextDecoder(); let buf = "";
   const deadline = Date.now() + ms;
@@ -56,7 +61,7 @@ describe("SSE /api/agi/stream (#7, hardened)", () => {
   it("auth: fail-closed 503 when the admin key is unconfigured", async () => {
     const { server, url } = await start();
     delete process.env.TESSERACT_ADMIN_KEY;
-    try { expect((await fetch(url, { headers: auth })).status).toBe(503); }
+    try { expect((await fetch(url)).status).toBe(503); }
     finally { process.env.TESSERACT_ADMIN_KEY = KEY; server.close(); }
   });
 
@@ -72,7 +77,7 @@ describe("SSE /api/agi/stream (#7, hardened)", () => {
   it("delivers exactly one event per broadcast to an authed client", async () => {
     const { server, url } = await start();
     const ac = new AbortController();
-    const res = await fetch(url, { headers: auth, signal: ac.signal });
+    const res = await fetch(url, { headers: auth(), signal: ac.signal });
     expect(res.headers.get("content-type")).toContain("text/event-stream");
     const first = await readUntil(res, (b) => b.includes(": connected"));
     const winners: string[] = [];
@@ -91,15 +96,15 @@ describe("SSE /api/agi/stream (#7, hardened)", () => {
   it("caps connections per IP (429 on the extra one) and frees the slot on close", async () => {
     const { server, url } = await start({ maxPerIp: 1, maxGlobal: 10 });
     const ac = new AbortController();
-    const a = await fetch(url, { headers: auth, signal: ac.signal });
+    const a = await fetch(url, { headers: auth(), signal: ac.signal });
     expect(a.status).toBe(200);
-    expect((await fetch(url, { headers: auth })).status).toBe(429);
+    expect((await fetch(url, { headers: auth() })).status).toBe(429);
     ac.abort();
     let ok = false;
     for (let i = 0; i < 40 && !ok; i++) {
       await new Promise((r) => setTimeout(r, 25));
       const ac2 = new AbortController();
-      const r = await fetch(url, { headers: auth, signal: ac2.signal });
+      const r = await fetch(url, { headers: auth(), signal: ac2.signal });
       ok = r.status === 200; ac2.abort();
     }
     expect(ok).toBe(true);
@@ -109,15 +114,15 @@ describe("SSE /api/agi/stream (#7, hardened)", () => {
   it("caps connections globally (429)", async () => {
     const { server, url } = await start({ maxPerIp: 10, maxGlobal: 2 });
     const acs = [new AbortController(), new AbortController()];
-    for (const ac of acs) expect((await fetch(url, { headers: auth, signal: ac.signal })).status).toBe(200);
-    expect((await fetch(url, { headers: auth })).status).toBe(429);
+    for (const ac of acs) expect((await fetch(url, { headers: auth(), signal: ac.signal })).status).toBe(200);
+    expect((await fetch(url, { headers: auth() })).status).toBe(429);
     acs.forEach((a) => a.abort()); server.close();
   });
 
   it("sends heartbeat comments on the configured interval", async () => {
     const { server, url } = await start({ heartbeatMs: 50 });
     const ac = new AbortController();
-    const res = await fetch(url, { headers: auth, signal: ac.signal });
+    const res = await fetch(url, { headers: auth(), signal: ac.signal });
     const { buf } = await readUntil(res, (b) => (b.match(/: hb/g) ?? []).length >= 2, 2000);
     ac.abort(); server.close();
     expect((buf.match(/: hb/g) ?? []).length).toBeGreaterThanOrEqual(2);
@@ -126,7 +131,7 @@ describe("SSE /api/agi/stream (#7, hardened)", () => {
   it("ends the connection at max lifetime and releases its listener", async () => {
     const before = workspaceListenerCount();
     const { server, url } = await start({ maxLifetimeMs: 100, heartbeatMs: 10_000 });
-    const res = await fetch(url, { headers: auth });
+    const res = await fetch(url, { headers: auth() });
     const reader = res.body!.getReader(); const dec = new TextDecoder(); let buf = ""; let ended = false;
     const deadline = Date.now() + 3000;
     while (Date.now() < deadline) {
