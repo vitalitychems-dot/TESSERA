@@ -40,7 +40,7 @@ catalog:
   tailwind-merge: ^3.7.0
   tailwindcss: ^4.1.14
   tsx: ^4.23.15
-  vite: ^7.3.5
+  vite: ^7.3.7
   zod: 3.25.76
 
 minimumReleaseAge: 1440
@@ -161,3 +161,9 @@ overrides:
   postcss-selector-parser: ^7.1.6
   # fast-copy: GHSA-jggr-w7fw-pc2j (moderate, stack exhaustion) via pino-pretty.
   fast-copy: ^4.1.0
+  # vite: GHSA-587h-7wmj-h5pm (high), GHSA-698v-4r3x-3vcv, GHSA-r825-w8mm-5pxw,
+  # GHSA-rq7h-c2jc-7f22, GHSA-vfpm-58rq-9qcg (moderate), GHSA-9jrq-w75r-8gcw (low).
+  # Catalog stays on 7.x. 8.3.5 is inside minimumReleaseAge (published 2026-10-21);
+  # the patched 8.x floor that is eligible is 8.3.4 (vitest pulls vite 8).
+  'vite@7.3.6': 7.3.7
+  'vite@>=8.3.0 <8.3.3': 8.3.4
