@@ -42,3 +42,17 @@ mtime_ms = 1792449468666
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:c009c0f4-4527-4ee1-86d1-fae6a4247dee/2e452af3-b67e-4705-a91a-2f12c1f67eea/98cfcd13-33a4-40c6-a467-ada54e3b7fbe"
 storage_version_token = "1792449973651719"
 content_type = "text/csv"
+
+[[outputs]]
+id = "UunaNtHm6jTq_5DL55NVD"
+uri = "file://attached_assets/generated_images/tessera-fire-water-signature.png"
+type = "image"
+title = "Tessera Fire & Water Signature"
+description = "Original Tessera sigil artwork with complementary fire and water in the background."
+logical_id = "91b728aa-b10e-4f7e-8497-e2e4734f78c5"
+content_hash = "sha256:6fd59a8979f5fd9eb65388a9a8ae7ac61ea6f656ac029ccafecf8b2512d443af"
+size = 1574576
+mtime_ms = 1792561163859
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:c009c0f4-4527-4ee1-86d1-fae6a4247dee/91b728aa-b10e-4f7e-8497-e2e4734f78c5/88e0c70e-2085-4a69-a22a-68efc7ec9f7a"
+storage_version_token = "1792561168378351"
+content_type = "image/png"
