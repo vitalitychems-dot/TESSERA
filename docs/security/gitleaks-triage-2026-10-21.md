@@ -362,6 +362,6 @@ regexes = ['''const secret = "password = ''']
 ```
 
 3. **Credential-guard test.** The line-15 fixture is ignored by two commit fingerprints in the root `.gitleaksignore`, not by a path allowlist. Do not add the fixture string as a secret regex. Other lines in `scripts/tessera-credential-guard.test.mjs` stay flagged. Rewriting fixtures with a `synthetic-` or `xxxx` marker so they stop matching is still open, and the values are not reproduced here.
-4. **Open decision for Father. Not adopted.** Excluding `opened/*` from the scan is not in effect. Whether those archive branches should be left out of Secret scan is an open decision for Father. This triage does not adopt that exclusion, and it does not delete or propose deleting any branch.
+4. **Open decision for Father, proposed in a separate PR.** Excluding `opened/*` from the scan is not in effect on this branch. Whether those archive branches should be left out of Secret scan is an open decision for Father, proposed in a separate PR (`security/gitleaks-exclude-opened`). This triage does not adopt that exclusion, and it does not delete or propose deleting any branch.
 
 _Triage by Computer (TESSERA orchestrator), 2026-10-21. Report-only. Classes are likely-live, likely-fixture, and unknown. Two fixture findings ignored via `.gitleaksignore`._
