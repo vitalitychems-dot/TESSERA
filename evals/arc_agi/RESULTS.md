@@ -27,3 +27,5 @@ Counts from the baseline summary, renamed so they are not read as a reliability 
 | 0.75-1.00 | 23 | 21 |
 
 The 0.50-0.75 bin has n=3, 95% CI [0.21, 0.94]. That is too small to interpret.
+
+summary.json key renamed post-run (confidence_calibration→confidence_counts); values unchanged.
