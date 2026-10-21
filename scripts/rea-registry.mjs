@@ -144,7 +144,10 @@ export function parseLockfile(lockText) {
       }
       if (field && dep) {
         const version = line.match(/^ {8}version:\s*(.+)$/);
-        if (version) current[field][dep].version = unquote(version[1]);
+        if (version) {
+          const rawVersion = unquote(version[1]);
+          current[field][dep].version = exactVersion(rawVersion) || rawVersion;
+        }
       }
     }
   }

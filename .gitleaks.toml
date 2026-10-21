@@ -24,3 +24,7 @@ regexes = ['''^fe05a71d3e4ed7d10bf68aa4eda6dd995ec070f4$''']
 description = "Log category captured from archived conference prose in archive/from-gitbook/archive/moved/collink1007-XXX/{tess,x/tess}/server/routes/algorithms.ts, next to the words access_log off. The captured value is the category label, not a credential."
 regexTarget = "secret"
 regexes = ['''^phase-7-untraceable$''']
+[[allowlists]]
+description = "Exact credential-shaped synthetic fixture in scripts/tessera-credential-guard.test.mjs; not a real credential."
+regexTarget = "secret"
+regexes = ["^API_KEY: sk-proj-1234567890abcdefghijklmnop$"]
