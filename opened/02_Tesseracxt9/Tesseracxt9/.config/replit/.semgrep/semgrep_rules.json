@@ -1,0 +1,1 @@
+semgrep_rules.json omitted: the vendored ruleset embeds sample secrets and GitHub push protection blocks it. The path is listed in memory.
