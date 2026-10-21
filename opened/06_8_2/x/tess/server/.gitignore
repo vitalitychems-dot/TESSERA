@@ -1,0 +1,12 @@
+x/tess/server/agi-state.json
+x/tess/server/rl-reward-history.json
+x/tess/server/forum-lifecycle-state.json
+x/tess/server/capabilities-registry.json
+x/tess/server/consciousness-state/manifest.json
+x/tess/server/cycle-proofs.json
+x/tess/server/economy/distribution.json
+x/tess/server/evolution-log.json
+x/tess/server/self-analysis.json
+x/tess/server/tesseranet-config/roadmap.json
+x/tess/server/tesseranet-config/sovereign-law-registry.json
+x/tess/server/vector-store/config.json

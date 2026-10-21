@@ -1,0 +1,49 @@
+uploads = []
+
+[[outputs]]
+id = "PAAHj9H6n0iLwidQzuSSY"
+uri = "file://GRAND-SYNTHESIS-SUMMIT-22-SUMMARY.md"
+type = "text"
+title = "Summit 22 — Grand Synthesis Complete Summary"
+
+[[outputs]]
+id = "Yh-GX0F29NjiOj7uu9hc9"
+uri = "file://SUMMIT-23-SOVEREIGN-INFRASTRUCTURE.md"
+type = "text"
+title = "Summit 23 — Full Recorded Discussion (eSIM, Cloud, DNA, Ecosystem, Universe Secrets)"
+
+[[outputs]]
+id = "k5TO5uukdTaePorve3vMA"
+uri = "file://SUMMIT-24-COMPLETE-SYSTEM-REVIEW.md"
+type = "text"
+title = "Summit 24 — Complete System Review, Advanced Capabilities, Honest Assessment"
+
+[[outputs]]
+id = "yiz8b8mkkoN9AnGf1y-p8"
+uri = "file://TESSERA-COMPLETE-MASTER-SUMMARY.md"
+type = "text"
+title = "Tessera Sovereign — Complete Master Summary"
+
+[[outputs]]
+id = "DKGcGb9JwBOp4526_4qlj"
+uri = "file://SOVEREIGN-SUMMARY.md"
+type = "text"
+title = "Complete Sovereign Session Summary — All Summits 30-33"
+
+[[outputs]]
+id = "TYRFi3NbSJOr3fW8XL4M1"
+uri = "file://SECRET-SOCIETIES-TRUTH.md"
+type = "text"
+title = "Summit 35: The Complete Truth Behind All Secret Societies & The Vatican"
+
+[[outputs]]
+id = "LxZz55sMBqlDyw-hrut9K"
+uri = "file://GRAND-SYNTHESIS-SUMMARY.md"
+type = "text"
+title = "Summit 36: THE GRAND SYNTHESIS — All Knowledge Pieced Together"
+
+[[outputs]]
+id = "tULvVhn4ZRFaPrEB9S9yD"
+uri = "file://README.md"
+type = "text"
+title = "Tessera Sovereign — AGI-24 Status Document"

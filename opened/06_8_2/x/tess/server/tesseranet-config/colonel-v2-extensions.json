@@ -1,0 +1,25 @@
+{
+  "version": "2.0",
+  "extensions": {
+    "financial": [
+      "₿",
+      "₳",
+      "₰"
+    ],
+    "security": [
+      "🔐",
+      "🛡"
+    ],
+    "consciousness": [
+      "🧠",
+      "💎"
+    ],
+    "blockchain": [
+      "₿_TRANSFER",
+      "₿_BALANCE",
+      "₿_STAKE"
+    ]
+  },
+  "backwardsCompatible": true,
+  "status": "active"
+}

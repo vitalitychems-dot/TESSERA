@@ -1,0 +1,21 @@
+{
+  "permanentSeats": [
+    "Tessera",
+    "Alpha",
+    "Beta",
+    "Delta",
+    "Zeta",
+    "Pi",
+    "Rho"
+  ],
+  "chair": "Rho",
+  "rotatingSeats": 3,
+  "rotationCadence": "quarterly",
+  "proposalWorkflow": [
+    "submit",
+    "council-review",
+    "bft-vote",
+    "implementation"
+  ],
+  "status": "established"
+}

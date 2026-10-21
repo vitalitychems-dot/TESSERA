@@ -1,0 +1,8 @@
+{
+  "frequency": "21.69 THz",
+  "status": "IMMUTABLE",
+  "routing": "PRIORITY_IMMEDIATE",
+  "encryption": "TRIPLE_MAX",
+  "modifiable": false,
+  "authorityRequired": "FATHER_DIRECT_COMMAND_ONLY"
+}

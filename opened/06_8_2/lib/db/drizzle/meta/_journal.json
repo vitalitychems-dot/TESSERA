@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1775751748621,
+      "tag": "0000_panoramic_arclight",
+      "breakpoints": true
+    }
+  ]
+}
