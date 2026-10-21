@@ -21,7 +21,7 @@ run type; report it separately and do not compare it as the same baseline.
   confidence calibration table (4 buckets of the solver's self-reported confidence).
 
 ## Solver (baseline)
-- `solvers/dsl_search.py`: breadth-first brute-force search over sequences of 47
+- `solvers/dsl_search.py`: breadth-first brute-force search over sequences of 44
   parameter-free grid transforms (rotations/flips, crop, scale, tile, mirror, gravity,
   object crop, halves, half-logic, enclosed fill, symmetry completion, color keep/remove),
   plus a per-program color remap learned from the train pairs.
@@ -51,3 +51,6 @@ and the git commit in `results/<UTC timestamp>/summary.json`.
 The 172/419 predictions and 157/400 tasks in collab `handoff/score-2026-10-20.md` are
 **reported, unverified**: no harness or logs for them were found. They are not a baseline.
 This harness's first run is the baseline.
+
+## Errata (after run 20261021T220320Z)
+- The solver description said 47 transforms; the committed solver (953b4a45, the code that ran) has **44**. Text fixed; no code or rule changed.
