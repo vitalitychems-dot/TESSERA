@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1744000000000,
+      "tag": "0000_initial_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1744000001000,
+      "tag": "0001_memory_knowledge_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1744000002000,
+      "tag": "0002_agi_training_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1744000003000,
+      "tag": "0003_summit_vote_perspective",
+      "breakpoints": true
+    }
+  ]
+}

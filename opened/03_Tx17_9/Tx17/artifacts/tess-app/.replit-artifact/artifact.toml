@@ -1,0 +1,38 @@
+kind = "web"
+previewPath = "/"
+title = "Tessera Sovereign"
+version = "1.0.0"
+id = "artifacts/tess-app"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 5000
+
+[services.development]
+run = "cd /home/runner/workspace/x/tess && PORT=5000 npm run dev"
+
+[services.env]
+PORT = "5000"
+BASE_PATH = "/"
+
+[services.production]
+
+[services.production.build]
+args = ["bash", "-c", "cd /home/runner/workspace/x/tess && npm run build"]
+
+[services.production.build.env]
+NODE_ENV = "production"
+BASE_PATH = "/"
+
+[services.production.run]
+args = ["bash", "-c", "cd /home/runner/workspace/x/tess && PORT=5000 npm run start"]
+
+[services.production.run.env]
+PORT = "5000"
+NODE_ENV = "production"
