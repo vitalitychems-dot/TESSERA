@@ -10,12 +10,19 @@
 Mission: deploy an airgapped, tokenless, self-improving local AGI network engine
 running in live software simulation mode until physical hardware deployment.
 
-## 1. Port Map
-- Tessera Web:               http://localhost:3000
-- Tessera API Server:        http://localhost:5000
-- UI Mockup Sandbox:         http://localhost:5173
-- GitAI Studio:              http://127.0.0.1:8080
-- Reticulum Local Mesh Gate: http://127.0.0.1:4242
+## 1. Port Map (source of truth: README.md "Port map"; local suite scheme)
+- Tessera Web:               http://localhost:3000   (TESSERA_WEB_PORT)
+- Tessera API Server:        http://localhost:5000   (TESSERA_API_PORT; suite launcher only)
+- UI Mockup Sandbox:         http://localhost:5173   (MOCKUP_SANDBOX_PORT)
+- GitAI:                     http://127.0.0.1:4183   (GITAI_PORT; studio tab at http://127.0.0.1:4173/gitai)
+- 3D Studio floor (v2):      http://127.0.0.1:4173   (PORT)
+- preview/ Vite app:         http://127.0.0.1:4174   (PORT)
+- Tessera Console (Next):    http://127.0.0.1:4391   (TESSERA_CONSOLE_PORT)
+- Gitbook MCP HTTP:          http://127.0.0.1:8787   (GITBOOK_HTTP_PORT)
+- Reticulum Local Mesh Gate: 127.0.0.1:4242 -- PLANNED, NOT YET IMPLEMENTED (no code
+  listens on this port; LIGHTNING spec pending from the Network lane)
+- Replit artifact scheme is separate and not interchangeable: web 18514, API 8080 (/api),
+  mockup 8081. 8080 is the Replit API, not GitAI.
 
 ## 2. Hardened Data Gate
 - Agents read only from the static local filesystem: /mesh/drops/ and /mesh/crystal_matrix/.
