@@ -17,6 +17,7 @@ import { invalidateForumIdentityCache } from "../lib/forum-identity-registry";
 import { logger } from "../lib/logger";
 import { safeDbErrorLog } from "../lib/safe-db-error";
 import { hashTokenSha256 } from "../lib/mesh-auth";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 import forumRouter from "../routes/forum";
 
 const mintHarness = vi.hoisted(() => ({ shortMint: false }));
@@ -61,6 +62,8 @@ const ALIGNED = [
 ].join(" ");
 
 const previousAdminKey = process.env.TESSERACT_ADMIN_KEY;
+const previousSessionSecret = process.env.SOVEREIGN_SESSION_SECRET;
+const TEST_SESSION_SECRET = "vitest-only-session-signing-secret-0123456789";
 
 function sha(value: string): string {
   const hash = hashTokenSha256(value);
@@ -280,6 +283,7 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
 
   beforeAll(async () => {
     process.env.TESSERACT_ADMIN_KEY = ADMIN_KEY;
+    process.env.SOVEREIGN_SESSION_SECRET = TEST_SESSION_SECRET;
     const alignment = scoreApplicantAlignment({
       applicantName: ROLLBACK_NAME,
       proposedTitle: "Shared work",
@@ -319,11 +323,18 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
     invalidateForumIdentityCache();
     if (previousAdminKey === undefined) delete process.env.TESSERACT_ADMIN_KEY;
     else process.env.TESSERACT_ADMIN_KEY = previousAdminKey;
+    if (previousSessionSecret === undefined) delete process.env.SOVEREIGN_SESSION_SECRET;
+    else process.env.SOVEREIGN_SESSION_SECRET = previousSessionSecret;
     if (!server) return;
     await new Promise<void>((resolve, reject) => {
       server?.close((error) => (error ? reject(error) : resolve()));
     });
   });
+
+  function ownerSessionHeaders(): Record<string, string> {
+    const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+    return { cookie: `${SESSION_COOKIE}=${issued.signedId}` };
+  }
 
   async function send(
     path: string,
@@ -520,7 +531,7 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
       let approved: Awaited<ReturnType<typeof send>>;
       try {
         approved = await send(`/tesseract-forum/applicants/${applicant.id}/approve`, {}, {
-          "x-admin-token": ADMIN_KEY,
+          ...ownerSessionHeaders(),
         });
         const logs = capture.text();
         expect(logs.includes("\"name\":\"DrizzleQueryError\"")).toBe(true);
@@ -589,7 +600,7 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
         registered = await send("/tesseract-forum/admin/register-principal", {
           token: "synthetic-register-target",
           principalName: REGISTER_NAME,
-        }, { "x-admin-token": ADMIN_KEY });
+        }, ownerSessionHeaders());
         const logs = capture.text();
         expect(logs.includes("\"name\":\"DrizzleQueryError\"")).toBe(true);
         expect(logs.includes("\"code\":\"P0001\"")).toBe(true);
@@ -825,7 +836,7 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => undefined as never);
     try {
       const approved = await send(`/tesseract-forum/applicants/${applicant.id}/approve`, {}, {
-        "x-admin-token": ADMIN_KEY,
+        ...ownerSessionHeaders(),
       });
       expect(approved.status).toBe(500);
       expect(approved.json?.ok).toBe(false);
