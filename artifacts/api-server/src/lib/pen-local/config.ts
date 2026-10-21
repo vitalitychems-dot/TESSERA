@@ -1,5 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import { isLocalPenFlagOn } from "../pen-switch";
 import { classifyLoopbackUrl, DEFAULT_LOCAL_PEN_URL } from "./loopback";
 import type { PenNotConfiguredReason } from "./types";
 import { pinMatches, sha256File } from "./weights";
@@ -24,9 +25,7 @@ export type PrepareResult =
   | { ok: true; config: PreparedPen }
   | { ok: false; reason: PenNotConfiguredReason };
 
-export function isLocalPenFlagOn(env: NodeJS.ProcessEnv = process.env): boolean {
-  return (env.TESSERA_PEN_LOCAL ?? "0").trim() === "1";
-}
+export { isLocalPenFlagOn };
 
 export function isCl1SimFlagOn(env: NodeJS.ProcessEnv = process.env): boolean {
   return (env.TESSERA_PEN_CL1_SIM ?? "0").trim() === "1";
