@@ -1,0 +1,9 @@
+{
+  "currentNodes": 14,
+  "targetNodes": 100,
+  "expansionRate": "5-per-week",
+  "selfRegistration": true,
+  "selfConfiguration": true,
+  "topology": "minimum-2-hop-distance",
+  "status": "expanding"
+}

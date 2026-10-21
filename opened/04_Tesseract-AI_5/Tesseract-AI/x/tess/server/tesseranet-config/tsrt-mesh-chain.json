@@ -1,0 +1,9 @@
+{
+  "chainId": "tesseranet-sovereign-1",
+  "blockTime": 9,
+  "consensus": "BFT-2/3",
+  "gasless": true,
+  "finalityType": "instant",
+  "externalBridge": "solana-mainnet",
+  "status": "live"
+}

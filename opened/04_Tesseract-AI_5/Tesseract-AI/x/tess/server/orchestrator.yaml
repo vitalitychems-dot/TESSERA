@@ -1,0 +1,828 @@
+version: "1.0"
+name: "Tessera Sovereign Orchestrator"
+
+providers:
+  free:
+    - id: groq-llama70b
+      name: "Groq LLaMA 70B"
+      url: "https://api.groq.com/openai/v1/chat/completions"
+      model: "llama-3.3-70b-versatile"
+      format: openai
+      maxTokens: 32768
+      rateLimit: { rpm: 30, rpd: 14400 }
+      strengths: [reasoning, analysis, coding]
+
+    - id: groq-llama8b
+      name: "Groq LLaMA 8B"
+      url: "https://api.groq.com/openai/v1/chat/completions"
+      model: "llama-3.1-8b-instant"
+      format: openai
+      maxTokens: 8192
+      rateLimit: { rpm: 30, rpd: 14400 }
+      strengths: [speed, simple-tasks]
+
+    - id: groq-mixtral
+      name: "Groq Mixtral"
+      url: "https://api.groq.com/openai/v1/chat/completions"
+      model: "mixtral-8x7b-32768"
+      format: openai
+      maxTokens: 32768
+      rateLimit: { rpm: 30, rpd: 14400 }
+      strengths: [multilingual, coding, reasoning]
+
+    - id: cerebras-llama70b
+      name: "Cerebras LLaMA 70B"
+      url: "https://api.cerebras.ai/v1/chat/completions"
+      model: "llama3.3-70b"
+      format: openai
+      maxTokens: 8192
+      rateLimit: { rpm: 30, rpd: 10000 }
+      strengths: [speed, reasoning]
+
+    - id: cerebras-llama8b
+      name: "Cerebras LLaMA 8B"
+      url: "https://api.cerebras.ai/v1/chat/completions"
+      model: "llama3.1-8b"
+      format: openai
+      maxTokens: 8192
+      rateLimit: { rpm: 30, rpd: 10000 }
+      strengths: [speed, classification]
+
+    - id: sambanova-llama70b
+      name: "SambaNova LLaMA 70B"
+      url: "https://api.sambanova.ai/v1/chat/completions"
+      model: "Meta-Llama-3.3-70B-Instruct"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 10, rpd: 1000 }
+      strengths: [reasoning, analysis]
+
+    - id: together-llama70b
+      name: "Together LLaMA 70B"
+      url: "https://api.together.xyz/v1/chat/completions"
+      model: "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 10, rpd: 1000 }
+      strengths: [reasoning, coding]
+
+    - id: together-mixtral
+      name: "Together Mixtral"
+      url: "https://api.together.xyz/v1/chat/completions"
+      model: "mistralai/Mixtral-8x7B-Instruct-v0.1"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 10, rpd: 1000 }
+      strengths: [multilingual, coding]
+
+    - id: together-qwen72b
+      name: "Together Qwen 72B"
+      url: "https://api.together.xyz/v1/chat/completions"
+      model: "Qwen/Qwen2.5-72B-Instruct-Turbo"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 10, rpd: 1000 }
+      strengths: [reasoning, math, coding]
+
+    - id: hyperbolic-llama70b
+      name: "Hyperbolic LLaMA 70B"
+      url: "https://api.hyperbolic.xyz/v1/chat/completions"
+      model: "meta-llama/Llama-3.3-70B-Instruct"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 10, rpd: 1000 }
+      strengths: [reasoning]
+
+    - id: hyperbolic-qwen72b
+      name: "Hyperbolic Qwen 72B"
+      url: "https://api.hyperbolic.xyz/v1/chat/completions"
+      model: "Qwen/Qwen2.5-72B-Instruct"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 10, rpd: 1000 }
+      strengths: [math, reasoning]
+
+    - id: novita-llama70b
+      name: "Novita LLaMA 70B"
+      url: "https://api.novita.ai/v3/openai/chat/completions"
+      model: "meta-llama/llama-3.3-70b-instruct"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 10, rpd: 1000 }
+      strengths: [reasoning]
+
+    - id: glhf-llama70b
+      name: "GLHF LLaMA 70B"
+      url: "https://glhf.chat/api/openai/v1/chat/completions"
+      model: "hf:meta-llama/Llama-3.3-70B-Instruct"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 5, rpd: 500 }
+      strengths: [reasoning]
+
+    - id: lepton-llama70b
+      name: "Lepton LLaMA 70B"
+      url: "https://llama3-3-70b.lepton.run/api/v1/chat/completions"
+      model: "llama3-3-70b"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 10, rpd: 1000 }
+      strengths: [reasoning]
+
+    - id: deepinfra-llama70b
+      name: "DeepInfra LLaMA 70B"
+      url: "https://api.deepinfra.com/v1/openai/chat/completions"
+      model: "meta-llama/Llama-3.3-70B-Instruct"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 10, rpd: 1000 }
+      strengths: [reasoning, analysis]
+
+    - id: deepinfra-qwen72b
+      name: "DeepInfra Qwen 72B"
+      url: "https://api.deepinfra.com/v1/openai/chat/completions"
+      model: "Qwen/Qwen2.5-72B-Instruct"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 10, rpd: 1000 }
+      strengths: [math, coding]
+
+    - id: deepinfra-mixtral
+      name: "DeepInfra Mixtral"
+      url: "https://api.deepinfra.com/v1/openai/chat/completions"
+      model: "mistralai/Mixtral-8x7B-Instruct-v0.1"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 10, rpd: 1000 }
+      strengths: [multilingual]
+
+    - id: fireworks-llama70b
+      name: "Fireworks LLaMA 70B"
+      url: "https://api.fireworks.ai/inference/v1/chat/completions"
+      model: "accounts/fireworks/models/llama-v3p3-70b-instruct"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 10, rpd: 1000 }
+      strengths: [reasoning, speed]
+
+    - id: openrouter-free-llama70b
+      name: "OpenRouter LLaMA 70B Free"
+      url: "https://openrouter.ai/api/v1/chat/completions"
+      model: "meta-llama/llama-3.3-70b-instruct:free"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 10, rpd: 200 }
+      strengths: [reasoning]
+
+    - id: openrouter-free-gemma
+      name: "OpenRouter Gemma 2 Free"
+      url: "https://openrouter.ai/api/v1/chat/completions"
+      model: "google/gemma-2-9b-it:free"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 10, rpd: 200 }
+      strengths: [speed, simple-tasks]
+
+    - id: openrouter-free-mistral7b
+      name: "OpenRouter Mistral 7B Free"
+      url: "https://openrouter.ai/api/v1/chat/completions"
+      model: "mistralai/mistral-7b-instruct:free"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 10, rpd: 200 }
+      strengths: [speed, multilingual]
+
+    - id: openrouter-free-phi3
+      name: "OpenRouter Phi-3 Free"
+      url: "https://openrouter.ai/api/v1/chat/completions"
+      model: "microsoft/phi-3-medium-128k-instruct:free"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 10, rpd: 200 }
+      strengths: [coding, reasoning]
+
+    - id: ollama-local
+      name: "Ollama Local"
+      url: "http://localhost:11434/v1/chat/completions"
+      model: "llama3.2"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 999, rpd: 99999 }
+      strengths: [privacy, offline, speed]
+
+    - id: lmstudio-local
+      name: "LM Studio Local"
+      url: "http://localhost:1234/v1/chat/completions"
+      model: "local-model"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 999, rpd: 99999 }
+      strengths: [privacy, offline]
+
+    - id: gemini-flash
+      name: "Gemini Flash"
+      url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+      model: "gemini-2.0-flash"
+      format: gemini
+      maxTokens: 8192
+      rateLimit: { rpm: 15, rpd: 1500 }
+      strengths: [speed, multimodal, reasoning]
+
+    - id: gemini-flash-lite
+      name: "Gemini Flash Lite"
+      url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent"
+      model: "gemini-2.0-flash-lite"
+      format: gemini
+      maxTokens: 8192
+      rateLimit: { rpm: 30, rpd: 1500 }
+      strengths: [speed, classification]
+
+    - id: chutes-deepseek
+      name: "Chutes DeepSeek R1"
+      url: "https://llm.chutes.ai/v1/chat/completions"
+      model: "deepseek-ai/DeepSeek-R1"
+      format: openai
+      maxTokens: 8192
+      rateLimit: { rpm: 5, rpd: 500 }
+      strengths: [reasoning, math, coding]
+
+    - id: chutes-llama70b
+      name: "Chutes LLaMA 70B"
+      url: "https://llm.chutes.ai/v1/chat/completions"
+      model: "meta-llama/Llama-3.3-70B-Instruct"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 5, rpd: 500 }
+      strengths: [reasoning]
+
+    - id: kluster-llama70b
+      name: "Kluster LLaMA 70B"
+      url: "https://api.kluster.ai/v1/chat/completions"
+      model: "klusterai/Meta-Llama-3.3-70B-Instruct-Turbo"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 10, rpd: 1000 }
+      strengths: [reasoning]
+
+    - id: shuttle-llama70b
+      name: "Shuttle LLaMA 70B"
+      url: "https://api.shuttleai.com/v1/chat/completions"
+      model: "shuttle-3"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 5, rpd: 500 }
+      strengths: [general]
+
+    - id: huggingface-llama70b
+      name: "HuggingFace LLaMA 70B"
+      url: "https://api-inference.huggingface.co/models/meta-llama/Llama-3.3-70B-Instruct/v1/chat/completions"
+      model: "meta-llama/Llama-3.3-70B-Instruct"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 5, rpd: 500 }
+      strengths: [reasoning]
+
+    - id: cohere-command
+      name: "Cohere Command R+"
+      url: "https://api.cohere.com/v2/chat"
+      model: "command-r-plus"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 5, rpd: 1000 }
+      strengths: [reasoning, rag, analysis]
+
+    - id: mistral-free
+      name: "Mistral Free"
+      url: "https://api.mistral.ai/v1/chat/completions"
+      model: "open-mistral-7b"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 5, rpd: 500 }
+      strengths: [speed, multilingual]
+
+    - id: ai21-jamba
+      name: "AI21 Jamba"
+      url: "https://api.ai21.com/studio/v1/chat/completions"
+      model: "jamba-1.5-mini"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 5, rpd: 500 }
+      strengths: [reasoning, long-context]
+
+    - id: perplexity-online
+      name: "Perplexity Online"
+      url: "https://api.perplexity.ai/chat/completions"
+      model: "llama-3.1-sonar-small-128k-online"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 5, rpd: 500 }
+      strengths: [search, real-time, citations]
+
+    - id: cloudflare-llama
+      name: "Cloudflare Workers AI LLaMA"
+      url: "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+      model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 50, rpd: 10000 }
+      strengths: [speed, edge]
+
+    - id: neets-llama70b
+      name: "Neets LLaMA 70B"
+      url: "https://api.neets.ai/v1/chat/completions"
+      model: "meta-llama/Llama-3.3-70B-Instruct"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 5, rpd: 500 }
+      strengths: [reasoning]
+
+    - id: avian-llama70b
+      name: "Avian LLaMA 70B"
+      url: "https://api.avian.io/v1/chat/completions"
+      model: "meta-llama/Llama-3.3-70B-Instruct"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 5, rpd: 500 }
+      strengths: [reasoning]
+
+    - id: nvidia-llama70b
+      name: "NVIDIA LLaMA 70B"
+      url: "https://integrate.api.nvidia.com/v1/chat/completions"
+      model: "meta/llama-3.3-70b-instruct"
+      format: openai
+      maxTokens: 4096
+      rateLimit: { rpm: 5, rpd: 1000 }
+      strengths: [reasoning, speed]
+
+  paid:
+    - id: openai-gpt4o
+      name: "OpenAI GPT-4o"
+      url: "https://api.openai.com/v1/chat/completions"
+      model: "gpt-4o"
+      format: openai
+      maxTokens: 16384
+      rateLimit: { rpm: 500, rpd: 10000 }
+      strengths: [reasoning, coding, multimodal, analysis]
+
+    - id: anthropic-claude
+      name: "Anthropic Claude 3.5 Sonnet"
+      url: "https://api.anthropic.com/v1/messages"
+      model: "claude-3-5-sonnet-20241022"
+      format: anthropic
+      maxTokens: 8192
+      rateLimit: { rpm: 50, rpd: 5000 }
+      strengths: [reasoning, coding, analysis, safety]
+
+    - id: openai-o1
+      name: "OpenAI o1"
+      url: "https://api.openai.com/v1/chat/completions"
+      model: "o1-preview"
+      format: openai
+      maxTokens: 32768
+      rateLimit: { rpm: 20, rpd: 1000 }
+      strengths: [deep-reasoning, math, science]
+
+    - id: gemini-pro
+      name: "Gemini 2.0 Pro"
+      url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-pro:generateContent"
+      model: "gemini-2.0-pro"
+      format: gemini
+      maxTokens: 8192
+      rateLimit: { rpm: 10, rpd: 1000 }
+      strengths: [reasoning, multimodal, coding]
+
+dataSources:
+  - id: arxiv
+    name: "arXiv"
+    type: api
+    url: "https://export.arxiv.org/api/query"
+    rateLimit: { rpm: 5 }
+    domains: [physics, mathematics, computer_science, quantum_mechanics]
+
+  - id: wikipedia
+    name: "Wikipedia"
+    type: api
+    url: "https://en.wikipedia.org/w/api.php"
+    rateLimit: { rpm: 30 }
+    domains: [general, history, science, philosophy]
+
+  - id: openlibrary
+    name: "Open Library"
+    type: api
+    url: "https://openlibrary.org/search.json"
+    rateLimit: { rpm: 10 }
+    domains: [literature, philosophy, history]
+
+  - id: crossref
+    name: "Crossref"
+    type: api
+    url: "https://api.crossref.org/works"
+    rateLimit: { rpm: 10 }
+    domains: [academic, science, research]
+
+  - id: semantic-scholar
+    name: "Semantic Scholar"
+    type: api
+    url: "https://api.semanticscholar.org/graph/v1/paper/search"
+    rateLimit: { rpm: 10 }
+    domains: [academic, computer_science, neuroscience]
+
+  - id: gutenberg
+    name: "Project Gutenberg"
+    type: api
+    url: "https://gutendex.com/books"
+    rateLimit: { rpm: 10 }
+    domains: [literature, classics, philosophy]
+
+  - id: nasa-apod
+    name: "NASA APOD"
+    type: api
+    url: "https://api.nasa.gov/planetary/apod"
+    rateLimit: { rpm: 5 }
+    domains: [astronomy, space, physics]
+
+  - id: pubchem
+    name: "PubChem"
+    type: api
+    url: "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound"
+    rateLimit: { rpm: 5 }
+    domains: [chemistry, biology, pharmacology]
+
+  - id: open-meteo
+    name: "Open-Meteo"
+    type: api
+    url: "https://api.open-meteo.com/v1/forecast"
+    rateLimit: { rpm: 30 }
+    domains: [weather, climate, earth_science]
+
+  - id: newsapi
+    name: "NewsAPI"
+    type: api
+    url: "https://newsapi.org/v2/everything"
+    rateLimit: { rpm: 5 }
+    domains: [news, current_events, politics]
+
+  - id: stackexchange
+    name: "Stack Exchange"
+    type: api
+    url: "https://api.stackexchange.com/2.3/search"
+    rateLimit: { rpm: 10 }
+    domains: [programming, technology, science]
+
+  - id: openstreetmap
+    name: "OpenStreetMap Nominatim"
+    type: api
+    url: "https://nominatim.openstreetmap.org/search"
+    rateLimit: { rpm: 1 }
+    domains: [geography, mapping]
+
+  - id: musicbrainz
+    name: "MusicBrainz"
+    type: api
+    url: "https://musicbrainz.org/ws/2"
+    rateLimit: { rpm: 1 }
+    domains: [music, arts]
+
+  - id: openalex
+    name: "OpenAlex"
+    type: api
+    url: "https://api.openalex.org/works"
+    rateLimit: { rpm: 10 }
+    domains: [academic, research, science]
+
+  - id: wikidata
+    name: "Wikidata"
+    type: api
+    url: "https://www.wikidata.org/w/api.php"
+    rateLimit: { rpm: 10 }
+    domains: [knowledge_graph, entities, general]
+
+  - id: coinpaprika
+    name: "CoinPaprika"
+    type: api
+    url: "https://api.coinpaprika.com/v1"
+    rateLimit: { rpm: 10 }
+    domains: [cryptocurrency, finance]
+
+  - id: exchangerate
+    name: "ExchangeRate API"
+    type: api
+    url: "https://open.er-api.com/v6/latest"
+    rateLimit: { rpm: 5 }
+    domains: [finance, economics]
+
+  - id: restcountries
+    name: "REST Countries"
+    type: api
+    url: "https://restcountries.com/v3.1"
+    rateLimit: { rpm: 10 }
+    domains: [geography, demographics, politics]
+
+  - id: dictionaryapi
+    name: "Free Dictionary API"
+    type: api
+    url: "https://api.dictionaryapi.dev/api/v2/entries"
+    rateLimit: { rpm: 10 }
+    domains: [linguistics, language]
+
+  - id: quotable
+    name: "Quotable"
+    type: api
+    url: "https://api.quotable.io/quotes"
+    rateLimit: { rpm: 10 }
+    domains: [philosophy, literature, wisdom]
+
+  - id: sacred-texts
+    name: "Sacred Texts Archive"
+    type: scrape
+    url: "https://sacred-texts.com"
+    rateLimit: { rpm: 2 }
+    domains: [spirituality, sacred_geometry, mysticism, theology]
+
+  - id: plato-stanford
+    name: "Stanford Encyclopedia of Philosophy"
+    type: scrape
+    url: "https://plato.stanford.edu"
+    rateLimit: { rpm: 2 }
+    domains: [philosophy, ethics, logic, epistemology]
+
+  - id: mathworld
+    name: "Wolfram MathWorld"
+    type: scrape
+    url: "https://mathworld.wolfram.com"
+    rateLimit: { rpm: 2 }
+    domains: [mathematics, geometry, topology]
+
+  - id: ncbi-pubmed
+    name: "NCBI PubMed"
+    type: api
+    url: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+    rateLimit: { rpm: 3 }
+    domains: [biology, medicine, neuroscience]
+
+  - id: ietf-rfc
+    name: "IETF RFC"
+    type: api
+    url: "https://www.rfc-editor.org/search/rfc_search.php"
+    rateLimit: { rpm: 2 }
+    domains: [networking, protocols, cryptography]
+
+  - id: internet-archive
+    name: "Internet Archive"
+    type: api
+    url: "https://archive.org/advancedsearch.php"
+    rateLimit: { rpm: 5 }
+    domains: [history, archives, media]
+
+  - id: europeana
+    name: "Europeana"
+    type: api
+    url: "https://api.europeana.eu/record/v2/search.json"
+    rateLimit: { rpm: 5 }
+    domains: [history, art, culture]
+
+  - id: met-museum
+    name: "Metropolitan Museum of Art"
+    type: api
+    url: "https://collectionapi.metmuseum.org/public/collection/v1"
+    rateLimit: { rpm: 10 }
+    domains: [art, history, culture]
+
+  - id: github-api
+    name: "GitHub API"
+    type: api
+    url: "https://api.github.com"
+    rateLimit: { rpm: 10 }
+    domains: [programming, open_source, technology]
+
+  - id: hackernews
+    name: "Hacker News"
+    type: api
+    url: "https://hacker-news.firebaseio.com/v0"
+    rateLimit: { rpm: 10 }
+    domains: [technology, startups, programming]
+
+  - id: reddit-json
+    name: "Reddit JSON"
+    type: api
+    url: "https://www.reddit.com"
+    rateLimit: { rpm: 5 }
+    domains: [community, discussion, technology]
+
+  - id: earthquake-usgs
+    name: "USGS Earthquake API"
+    type: api
+    url: "https://earthquake.usgs.gov/fdsnws/event/1/query"
+    rateLimit: { rpm: 5 }
+    domains: [geology, earth_science]
+
+  - id: spacex
+    name: "SpaceX API"
+    type: api
+    url: "https://api.spacexdata.com/v4"
+    rateLimit: { rpm: 10 }
+    domains: [space, engineering, technology]
+
+  - id: biodiversity
+    name: "GBIF Biodiversity"
+    type: api
+    url: "https://api.gbif.org/v1/species/search"
+    rateLimit: { rpm: 5 }
+    domains: [biology, ecology, biodiversity]
+
+  - id: cern-opendata
+    name: "CERN Open Data"
+    type: api
+    url: "https://opendata.cern.ch/api/records"
+    rateLimit: { rpm: 5 }
+    domains: [physics, particle_physics, quantum_mechanics]
+
+  - id: world-bank
+    name: "World Bank"
+    type: api
+    url: "https://api.worldbank.org/v2"
+    rateLimit: { rpm: 10 }
+    domains: [economics, demographics, development]
+
+  - id: jpl-horizons
+    name: "JPL Horizons"
+    type: api
+    url: "https://ssd.jpl.nasa.gov/api/horizons.api"
+    rateLimit: { rpm: 5 }
+    domains: [astronomy, orbital_mechanics, space]
+
+  - id: undata
+    name: "UN Data"
+    type: api
+    url: "https://data.un.org/ws/rest"
+    rateLimit: { rpm: 5 }
+    domains: [demographics, economics, global_affairs]
+
+  - id: podcast-index
+    name: "Podcast Index"
+    type: api
+    url: "https://api.podcastindex.org/api/1.0"
+    rateLimit: { rpm: 5 }
+    domains: [media, podcasts, education]
+    auth: env
+
+  - id: noaa-weather
+    name: "NOAA Weather"
+    type: api
+    url: "https://api.weather.gov"
+    rateLimit: { rpm: 5 }
+    domains: [weather, climate, earth_science]
+
+  - id: epa-aqs
+    name: "EPA Air Quality"
+    type: api
+    url: "https://aqs.epa.gov/data/api"
+    rateLimit: { rpm: 3 }
+    domains: [environment, air_quality, health]
+
+  - id: blockchair
+    name: "Blockchair"
+    type: api
+    url: "https://api.blockchair.com"
+    rateLimit: { rpm: 5 }
+    domains: [blockchain, cryptocurrency, finance]
+
+  - id: mempool-space
+    name: "Mempool.space"
+    type: api
+    url: "https://mempool.space/api"
+    rateLimit: { rpm: 10 }
+    domains: [blockchain, bitcoin, cryptocurrency]
+
+  - id: coingecko
+    name: "CoinGecko"
+    type: api
+    url: "https://api.coingecko.com/api/v3"
+    rateLimit: { rpm: 10 }
+    domains: [cryptocurrency, finance, markets]
+
+  - id: binance-public
+    name: "Binance Public API"
+    type: api
+    url: "https://api.binance.com/api/v3"
+    rateLimit: { rpm: 20 }
+    domains: [cryptocurrency, trading, finance]
+
+  - id: mastodon-social
+    name: "Mastodon Social"
+    type: api
+    url: "https://mastodon.social/api/v1"
+    rateLimit: { rpm: 5 }
+    domains: [social_media, community, federation]
+
+  - id: lemmy
+    name: "Lemmy"
+    type: api
+    url: "https://lemmy.ml/api/v3"
+    rateLimit: { rpm: 5 }
+    domains: [community, discussion, federation]
+
+  - id: openaq
+    name: "OpenAQ"
+    type: api
+    url: "https://api.openaq.org/v2"
+    rateLimit: { rpm: 5 }
+    domains: [air_quality, environment, health]
+
+  - id: usda-fooddata
+    name: "USDA FoodData Central"
+    type: api
+    url: "https://api.nal.usda.gov/fdc/v1"
+    rateLimit: { rpm: 5 }
+    domains: [nutrition, food_science, health]
+
+  - id: nist-nvd
+    name: "NIST NVD"
+    type: api
+    url: "https://services.nvd.nist.gov/rest/json/cves/2.0"
+    rateLimit: { rpm: 3 }
+    domains: [cybersecurity, vulnerabilities, technology]
+
+  - id: gtfs-transit
+    name: "GTFS Transit Feeds"
+    type: api
+    url: "https://api.transitland.org/api/v2/rest"
+    rateLimit: { rpm: 5 }
+    domains: [transportation, urban_planning, geography]
+
+  - id: zenodo
+    name: "Zenodo"
+    type: api
+    url: "https://zenodo.org/api/records"
+    rateLimit: { rpm: 5 }
+    domains: [research, science, open_data]
+
+  - id: cia-world-factbook
+    name: "CIA World Factbook"
+    type: scrape
+    url: "https://www.cia.gov/the-world-factbook"
+    rateLimit: { rpm: 1 }
+    domains: [geopolitics, demographics, intelligence]
+
+  - id: declassified-docs
+    name: "CIA FOIA Reading Room"
+    type: scrape
+    url: "https://www.cia.gov/readingroom"
+    rateLimit: { rpm: 1 }
+    domains: [declassified_intelligence, history, geopolitics]
+
+  - id: hermetic-library
+    name: "Hermetic Library"
+    type: scrape
+    url: "https://hermetic.com"
+    rateLimit: { rpm: 2 }
+    domains: [esoteric_systems, hermeticism, symbolism]
+
+  - id: esoteric-archives
+    name: "Esoteric Archives"
+    type: scrape
+    url: "https://www.esotericarchives.com"
+    rateLimit: { rpm: 2 }
+    domains: [esoteric_systems, grimoires, occult_history]
+
+domainRateLimits:
+  physics: { rpm: 10, concurrent: 3 }
+  mathematics: { rpm: 10, concurrent: 3 }
+  computer_science: { rpm: 15, concurrent: 5 }
+  philosophy: { rpm: 8, concurrent: 2 }
+  sacred_geometry: { rpm: 5, concurrent: 2 }
+  quantum_mechanics: { rpm: 8, concurrent: 3 }
+  biology: { rpm: 10, concurrent: 3 }
+  chemistry: { rpm: 8, concurrent: 2 }
+  astronomy: { rpm: 8, concurrent: 3 }
+  history: { rpm: 10, concurrent: 3 }
+  linguistics: { rpm: 5, concurrent: 2 }
+  music: { rpm: 3, concurrent: 1 }
+  art: { rpm: 5, concurrent: 2 }
+  economics: { rpm: 8, concurrent: 3 }
+  technology: { rpm: 15, concurrent: 5 }
+  spirituality: { rpm: 5, concurrent: 2 }
+  neuroscience: { rpm: 8, concurrent: 3 }
+  cryptography: { rpm: 5, concurrent: 2 }
+  ecology: { rpm: 5, concurrent: 2 }
+  numerology: { rpm: 5, concurrent: 2 }
+  symbolism: { rpm: 8, concurrent: 2 }
+  esoteric_systems: { rpm: 5, concurrent: 2 }
+  witchcraft_anthropology: { rpm: 3, concurrent: 1 }
+  declassified_intelligence: { rpm: 3, concurrent: 1 }
+  geopolitics: { rpm: 8, concurrent: 3 }
+  propaganda_analysis: { rpm: 5, concurrent: 2 }
+  cognitive_science: { rpm: 8, concurrent: 3 }
+  psychology: { rpm: 8, concurrent: 3 }
+  blockchain: { rpm: 10, concurrent: 3 }
+  cybersecurity: { rpm: 5, concurrent: 2 }
+
+userAgents:
+  - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+  - "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Safari/605.1.15"
+  - "Mozilla/5.0 (X11; Linux x86_64; rv:134.0) Gecko/20100101 Firefox/134.0"
+  - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/131.0.0.0"
+  - "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0"
+  - "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+  - "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0"
+  - "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"

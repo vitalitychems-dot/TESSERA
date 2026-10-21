@@ -1,0 +1,11 @@
+{
+  "initialized": true,
+  "totalBuilds": 0,
+  "successfulBuilds": 0,
+  "failedBuilds": 0,
+  "rolledBackBuilds": 0,
+  "lastBuildAt": null,
+  "nextBuildAt": 1775947263394,
+  "pendingGaps": [],
+  "activeConferenceId": null
+}

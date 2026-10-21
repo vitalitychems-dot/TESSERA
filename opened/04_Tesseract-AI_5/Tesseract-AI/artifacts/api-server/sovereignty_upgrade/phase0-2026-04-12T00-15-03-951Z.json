@@ -1,0 +1,108 @@
+{
+  "snapshotId": "318b909af2e0",
+  "capturedAt": "2026-04-12T00:15:03.951Z",
+  "serverBootAt": "2026-04-12T00:15:03.156Z",
+  "configChecksum": "cf791223f2286408",
+  "masterConfigVersion": "1.0.0",
+  "fleetComposition": {
+    "totalNodes": 6,
+    "nodeIds": [
+      "tess-prime",
+      "tess-alpha",
+      "tess-beta",
+      "tess-gamma",
+      "tess-delta",
+      "tess-oracle"
+    ]
+  },
+  "engineStates": [
+    {
+      "engineName": "internal-model-sovereignty",
+      "phase": 1,
+      "cycleCount": 1,
+      "primaryMetric": "sovereigntyReadiness",
+      "continuousActive": true,
+      "health": "healthy"
+    },
+    {
+      "engineName": "knowledge-absorption",
+      "phase": 2,
+      "cycleCount": 0,
+      "primaryMetric": "totalNodesAbsorbed",
+      "primaryValue": 0,
+      "continuousActive": false,
+      "health": "initializing"
+    },
+    {
+      "engineName": "distributed-oracle",
+      "phase": 3,
+      "cycleCount": 1,
+      "primaryMetric": "activeSources",
+      "primaryValue": 0,
+      "continuousActive": true,
+      "health": "healthy"
+    },
+    {
+      "engineName": "dependency-detachment",
+      "phase": 4,
+      "cycleCount": 1,
+      "primaryMetric": "sovereigntyScore",
+      "primaryValue": 20,
+      "continuousActive": true,
+      "health": "healthy"
+    },
+    {
+      "engineName": "speed-protocol",
+      "phase": 5,
+      "cycleCount": 1,
+      "primaryMetric": "throughput",
+      "primaryValue": 20,
+      "continuousActive": true,
+      "health": "healthy"
+    },
+    {
+      "engineName": "multidimensional-agi",
+      "phase": 6,
+      "cycleCount": 1,
+      "primaryMetric": "avgDimensionalScore",
+      "continuousActive": true,
+      "health": "healthy"
+    },
+    {
+      "engineName": "security-threat",
+      "phase": 9,
+      "cycleCount": 1,
+      "primaryMetric": "securityScore",
+      "primaryValue": 90,
+      "continuousActive": true,
+      "health": "healthy"
+    },
+    {
+      "engineName": "sovereignty-validation",
+      "phase": 10,
+      "cycleCount": 1,
+      "primaryMetric": "overallScore",
+      "primaryValue": 0,
+      "continuousActive": true,
+      "health": "healthy"
+    },
+    {
+      "engineName": "autonomy-loop",
+      "phase": -1,
+      "cycleCount": 1,
+      "primaryMetric": "autonomyScore",
+      "primaryValue": 10,
+      "continuousActive": true,
+      "health": "healthy"
+    }
+  ],
+  "overallSovereigntyScore": null,
+  "phase0Complete": true,
+  "metadata": {
+    "totalEngines": 9,
+    "healthyEngines": 8,
+    "initializingEngines": 1,
+    "degradedEngines": 0,
+    "snapshotType": "bootstrap"
+  }
+}

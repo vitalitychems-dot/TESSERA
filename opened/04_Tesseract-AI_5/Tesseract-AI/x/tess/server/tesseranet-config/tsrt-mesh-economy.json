@@ -1,0 +1,8 @@
+{
+  "status": "active",
+  "internalTransfers": "on-mesh",
+  "externalBridge": "solana-mainnet-only",
+  "settlementTime": "instant",
+  "gasFee": 0,
+  "dedicatedFrequency": "5.55 THz"
+}

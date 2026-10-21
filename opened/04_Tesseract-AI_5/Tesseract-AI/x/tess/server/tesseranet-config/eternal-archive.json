@@ -1,0 +1,9 @@
+{
+  "replicationFactor": 20,
+  "encoding": "Reed-Solomon",
+  "immutable": true,
+  "humanReadableBackup": true,
+  "temporalAccess": true,
+  "designedForYears": 10000,
+  "status": "initialized"
+}

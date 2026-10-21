@@ -1,0 +1,115 @@
+version: "1.0"
+name: "Tessera Sovereignty Configuration"
+
+thresholds:
+  sovereigntyRatioTarget: 0.70
+  performanceParityMinimum: 0.80
+  reliabilityMinimum: 0.90
+  hallucinationMaxRate: 0.10
+  readyForDisconnectScore: 0.85
+
+disconnectPlan:
+  phases:
+    - id: phase1
+      name: "Reduce External Dependency"
+      description: "Route simple tasks to local models, keep complex tasks on external"
+      targetSovereigntyRatio: 0.30
+      providersToPhaseOut: []
+      internalReplacements:
+        - provider: "ollama-local"
+          tasks: [classification, summarization, simple-qa]
+        - provider: "lmstudio-local"
+          tasks: [code-completion, translation]
+
+    - id: phase2
+      name: "Expand Local Coverage"
+      description: "Route reasoning and analysis tasks to fine-tuned local models"
+      targetSovereigntyRatio: 0.60
+      providersToPhaseOut:
+        - groq-llama8b
+        - cerebras-llama8b
+        - openrouter-free-gemma
+        - openrouter-free-mistral7b
+      internalReplacements:
+        - provider: "ollama-local"
+          tasks: [reasoning, analysis, coding, math]
+
+    - id: phase3
+      name: "Near-Full Sovereignty"
+      description: "Phase out most external providers, keep only top-tier as fallbacks"
+      targetSovereigntyRatio: 0.90
+      providersToPhaseOut:
+        - groq-llama70b
+        - cerebras-llama70b
+        - sambanova-llama70b
+        - together-llama70b
+        - hyperbolic-llama70b
+        - deepinfra-llama70b
+        - fireworks-llama70b
+        - openrouter-free-llama70b
+      internalReplacements:
+        - provider: "ollama-local"
+          tasks: [all]
+
+    - id: phase4
+      name: "Full Disconnect"
+      description: "All external providers disabled — full sovereignty achieved"
+      targetSovereigntyRatio: 1.0
+      providersToPhaseOut: [all-external]
+      internalReplacements:
+        - provider: "ollama-local"
+          tasks: [all]
+        - provider: "lmstudio-local"
+          tasks: [all]
+
+  safetyChecks:
+    - name: "Performance Parity Check"
+      description: "Ensure internal models match external quality within 20%"
+      required: true
+      threshold: 0.80
+
+    - name: "Reliability Check"
+      description: "Internal model uptime must exceed 95%"
+      required: true
+      threshold: 0.95
+
+    - name: "Domain Coverage Check"
+      description: "All critical domains must have internal model coverage"
+      required: true
+      domains: [reasoning, coding, math, analysis, science]
+
+    - name: "Hallucination Rate Check"
+      description: "Internal model hallucination rate must be below threshold"
+      required: true
+      threshold: 0.10
+
+  dryRunDuration: 86400
+  rollbackWindow: 3600
+
+metrics:
+  trackingInterval: 300
+  historyRetention: 604800
+  categories:
+    - id: provider_usage
+      name: "Provider Usage Distribution"
+      description: "Internal vs external call ratio over time"
+    - id: performance_gap
+      name: "Performance Gap"
+      description: "Quality delta between internal and external models"
+    - id: cost_savings
+      name: "Cost Savings"
+      description: "Estimated cost avoided by using internal models"
+    - id: reliability
+      name: "Reliability Comparison"
+      description: "Uptime and error rates for internal vs external"
+    - id: domain_coverage
+      name: "Domain Coverage"
+      description: "Which domains are handled internally vs externally"
+
+governance:
+  decisionAuthority: "grand_council"
+  approvalRequired: true
+  disconnectRequiresConsensus: true
+  consensusThreshold: 0.67
+  emergencyRollback: true
+  humanOverrideEnabled: true

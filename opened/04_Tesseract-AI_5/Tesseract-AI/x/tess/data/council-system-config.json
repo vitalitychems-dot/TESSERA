@@ -1,0 +1,99 @@
+{
+  "config": {
+    "trading.maxPositionSize": 0.05,
+    "trading.stopLossPercent": 5,
+    "trading.maxConcurrentTrades": 3,
+    "trading.riskTolerance": "moderate",
+    "trading.autoRebalance": false,
+    "llm.maxConcurrentRequests": 10,
+    "llm.defaultTimeout": 30000,
+    "llm.retryAttempts": 3,
+    "llm.fallbackEnabled": true,
+    "llm.costOptimization": "balanced",
+    "llm.healthPingInterval": 60000,
+    "security.scanInterval": 21600000,
+    "security.autoUpgrade": true,
+    "security.maxLoginAttempts": 5,
+    "security.sessionTimeout": 3600000,
+    "security.threatLevel": "normal",
+    "community.forumCategories": [
+      "general",
+      "proposals",
+      "development",
+      "trading",
+      "security"
+    ],
+    "community.autoModeration": false,
+    "community.postApproval": "none",
+    "agent.auditInterval": 600000,
+    "agent.idleTimeout": 1800000,
+    "agent.maxTaskQueue": 50,
+    "agent.collaborationMode": "cooperative",
+    "agent.learningRate": 0.01,
+    "revenue.targetMonthly": 0,
+    "revenue.reinvestPercent": 20,
+    "revenue.reportInterval": 86400000,
+    "consciousness.cycleInterval": 120000,
+    "consciousness.reflectionDepth": 3,
+    "consciousness.memoryRetention": 0.85
+  },
+  "history": [
+    {
+      "proposalId": "vote-1775944702139-kigr69",
+      "changes": [
+        {
+          "subsystem": "agent",
+          "parameter": "capabilityRefresh",
+          "oldValue": "static",
+          "newValue": "dynamic",
+          "appliedAt": 1775944707512
+        }
+      ],
+      "timestamp": 1775944707512,
+      "rolledBack": false
+    },
+    {
+      "proposalId": "vote-1775944702186-6uohyi",
+      "changes": [
+        {
+          "subsystem": "agent",
+          "parameter": "capabilityRefresh",
+          "oldValue": "static",
+          "newValue": "dynamic",
+          "appliedAt": 1775944707848
+        }
+      ],
+      "timestamp": 1775944707848,
+      "rolledBack": false
+    },
+    {
+      "proposalId": "vote-1775944702244-umstnn",
+      "changes": [
+        {
+          "subsystem": "revenue",
+          "parameter": "optimizationCycle",
+          "oldValue": "manual",
+          "newValue": "council-driven",
+          "appliedAt": 1775944708405
+        }
+      ],
+      "timestamp": 1775944708405,
+      "rolledBack": false
+    },
+    {
+      "proposalId": "vote-1775944702251-ela6iz",
+      "changes": [
+        {
+          "subsystem": "community",
+          "parameter": "voiceProcessed",
+          "oldValue": "pending",
+          "newValue": "acknowledged",
+          "appliedAt": 1775944708964
+        }
+      ],
+      "timestamp": 1775944708964,
+      "rolledBack": false
+    }
+  ],
+  "savedAt": 1775944708964
+}

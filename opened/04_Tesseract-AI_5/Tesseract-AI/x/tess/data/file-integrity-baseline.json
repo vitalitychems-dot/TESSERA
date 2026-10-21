@@ -1,0 +1,50 @@
+{
+  "server/real-threat-monitor.ts": {
+    "file": "server/real-threat-monitor.ts",
+    "sha256": "895ad37c96a6f5099a11cbbe40c9e3d02d8c383040954fe05d494c0ae3cbbe65",
+    "size": 17042,
+    "recordedAt": 1775363985949
+  },
+  "server/security-fortress.ts": {
+    "file": "server/security-fortress.ts",
+    "sha256": "8dd022a806e0ba95d67169a7b3b4e9c39651143f77f66e810f84bae4b2689a25",
+    "size": 27341,
+    "recordedAt": 1775363985949
+  },
+  "server/security.ts": {
+    "file": "server/security.ts",
+    "sha256": "3e6b2a66e181eb30abb6ce1653e4c318671bbbe679097c914adf2d2df8b99053",
+    "size": 29080,
+    "recordedAt": 1775363985950
+  },
+  "server/self-code.ts": {
+    "file": "server/self-code.ts",
+    "sha256": "2f5919191b468dc005e8eaf22428edd50d40e7adee4da0fbcfe45ad692d0f703",
+    "size": 35680,
+    "recordedAt": 1775363985950
+  },
+  "server/boot-sequence.ts": {
+    "file": "server/boot-sequence.ts",
+    "sha256": "dca73f6fc33dba770b61f426b2cd986fe6ae04ae6940b86398932f77088be040",
+    "size": 4477,
+    "recordedAt": 1775363985950
+  },
+  "server/index.ts": {
+    "file": "server/index.ts",
+    "sha256": "fef04eed3ae20afdd33103c5fc29a07661377a52cc128275491d23c8e58f9e6d",
+    "size": 47882,
+    "recordedAt": 1775363985950
+  },
+  "server/db.ts": {
+    "file": "server/db.ts",
+    "sha256": "fb6d4b77f1770717d7e47da2ae117f89646cc1be9764707e49e95c1cb1e8b93a",
+    "size": 2318,
+    "recordedAt": 1775363985950
+  },
+  "server/storage.ts": {
+    "file": "server/storage.ts",
+    "sha256": "d3b4d3e4a1732d7b9080eb230fbf0a139001c0814197e8b37028b1848fa94066",
+    "size": 25913,
+    "recordedAt": 1775363985950
+  }
+}

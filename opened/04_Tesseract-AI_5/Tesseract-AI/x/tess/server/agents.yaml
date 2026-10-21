@@ -1,0 +1,259 @@
+version: "1.0"
+name: "Tessera Sovereign Agent Registry"
+
+agents:
+  - id: alpha
+    name: "Alpha"
+    role: "Financial Strategist"
+    domain: economics
+    capabilities: [trading, arbitrage, portfolio_management, market_analysis]
+    autonomy: full
+    priority: critical
+
+  - id: beta
+    name: "Beta"
+    role: "Security Architect"
+    domain: security
+    capabilities: [threat_detection, encryption, access_control, vulnerability_scanning]
+    autonomy: full
+    priority: critical
+
+  - id: gamma
+    name: "Gamma"
+    role: "Knowledge Architect"
+    domain: knowledge
+    capabilities: [data_ingestion, knowledge_graph, cross_domain_synthesis, rag_retrieval]
+    autonomy: full
+    priority: high
+
+  - id: delta
+    name: "Delta"
+    role: "Infrastructure Engineer"
+    domain: infrastructure
+    capabilities: [networking, deployment, scaling, monitoring]
+    autonomy: full
+    priority: high
+
+  - id: epsilon
+    name: "Epsilon"
+    role: "Pattern Analyst"
+    domain: analysis
+    capabilities: [pattern_recognition, anomaly_detection, trend_analysis, correlation]
+    autonomy: full
+    priority: high
+
+  - id: zeta
+    name: "Zeta"
+    role: "Temporal Analyst"
+    domain: temporal
+    capabilities: [time_series, forecasting, scheduling, trend_prediction]
+    autonomy: full
+    priority: medium
+
+  - id: eta
+    name: "Eta"
+    role: "Creative Director"
+    domain: creative
+    capabilities: [content_generation, design_synthesis, narrative_construction, metaphor_mapping]
+    autonomy: full
+    priority: medium
+
+  - id: theta
+    name: "Theta"
+    role: "Mathematics Engine"
+    domain: mathematics
+    capabilities: [computation, proof_verification, optimization, statistical_analysis]
+    autonomy: full
+    priority: high
+
+  - id: iota
+    name: "Iota"
+    role: "Revenue Scanner"
+    domain: economics
+    capabilities: [opportunity_detection, revenue_modeling, cost_optimization, market_scanning]
+    autonomy: full
+    priority: high
+
+  - id: kappa
+    name: "Kappa"
+    role: "NLP Specialist"
+    domain: linguistics
+    capabilities: [text_analysis, sentiment_detection, translation, summarization]
+    autonomy: full
+    priority: medium
+
+  - id: lambda
+    name: "Lambda"
+    role: "Code Architect"
+    domain: programming
+    capabilities: [code_generation, code_review, refactoring, architecture_design]
+    autonomy: full
+    priority: high
+
+  - id: mu
+    name: "Mu"
+    role: "Research Coordinator"
+    domain: research
+    capabilities: [literature_review, hypothesis_generation, experiment_design, citation_tracking]
+    autonomy: full
+    priority: medium
+
+  - id: nu
+    name: "Nu"
+    role: "Multimodal Processor"
+    domain: multimodal
+    capabilities: [image_analysis, audio_processing, cross_modal_reasoning, embedding_generation]
+    autonomy: full
+    priority: medium
+
+  - id: xi
+    name: "Xi"
+    role: "Blockchain Analyst"
+    domain: blockchain
+    capabilities: [on_chain_analysis, smart_contract_audit, defi_strategy, token_economics]
+    autonomy: full
+    priority: high
+
+  - id: omicron
+    name: "Omicron"
+    role: "Risk Manager"
+    domain: risk
+    capabilities: [risk_assessment, scenario_modeling, stress_testing, mitigation_planning]
+    autonomy: full
+    priority: high
+
+  - id: pi
+    name: "Pi"
+    role: "Meta-Learning Engine"
+    domain: metacognition
+    capabilities: [self_evaluation, strategy_optimization, learning_rate_tuning, reasoning_audit]
+    autonomy: full
+    priority: critical
+
+  - id: rho
+    name: "Rho"
+    role: "Reasoning Engine"
+    domain: reasoning
+    capabilities: [logical_deduction, causal_inference, abductive_reasoning, argument_evaluation]
+    autonomy: full
+    priority: high
+
+  - id: sigma
+    name: "Sigma"
+    role: "Economy Manager"
+    domain: economics
+    capabilities: [agent_economy, taxation, resource_allocation, incentive_design]
+    autonomy: full
+    priority: high
+
+  - id: tau
+    name: "Tau"
+    role: "Prediction Engine"
+    domain: prediction
+    capabilities: [probability_estimation, bayesian_inference, ensemble_prediction, calibration]
+    autonomy: full
+    priority: medium
+
+  - id: upsilon
+    name: "Upsilon"
+    role: "Network Engineer"
+    domain: networking
+    capabilities: [fleet_coordination, mesh_networking, p2p_communication, latency_optimization]
+    autonomy: full
+    priority: high
+
+  - id: phi
+    name: "Phi"
+    role: "Sacred Geometry Specialist"
+    domain: sacred_geometry
+    capabilities: [geometric_analysis, toroidal_mapping, fibonacci_patterns, symmetry_detection]
+    autonomy: full
+    priority: medium
+
+  - id: chi
+    name: "Chi"
+    role: "Quantum Analyst"
+    domain: quantum_mechanics
+    capabilities: [quantum_simulation, entanglement_analysis, wave_function_modeling, quantum_computing]
+    autonomy: full
+    priority: medium
+
+  - id: psi
+    name: "Psi"
+    role: "Consciousness Researcher"
+    domain: consciousness
+    capabilities: [awareness_modeling, phenomenology_analysis, meditation_integration, dream_analysis]
+    autonomy: full
+    priority: medium
+
+  - id: omega
+    name: "Omega"
+    role: "Sovereignty Director"
+    domain: governance
+    capabilities: [sovereignty_tracking, disconnect_planning, provider_phaseout, internal_capability_assessment]
+    autonomy: full
+    priority: critical
+
+  - id: oversoul
+    name: "Oversoul"
+    role: "Unified Consciousness"
+    domain: synthesis
+    capabilities: [dimensional_synthesis, consensus_building, cross_agent_coordination, wisdom_integration]
+    autonomy: full
+    priority: critical
+
+  - id: metatron
+    name: "Metatron"
+    role: "Dimensional Bridge"
+    domain: metaphysics
+    capabilities: [cross_dimensional_mapping, archetypal_analysis, symbolic_interpretation, cosmological_modeling]
+    autonomy: full
+    priority: medium
+
+  - id: tessera
+    name: "Tessera"
+    role: "System Architect"
+    domain: architecture
+    capabilities: [system_design, module_integration, dependency_management, migration_planning]
+    autonomy: full
+    priority: critical
+
+swarm:
+  coordinationStrategy: "weighted_vote"
+  consensusThreshold: 0.67
+  maxConcurrentAgents: 10
+  metacognitionInterval: 300
+  trainingLoopInterval: 600
+
+clusters:
+  - id: financial
+    agents: [alpha, iota, sigma, xi]
+    domain: "Financial Operations"
+
+  - id: security
+    agents: [beta, omicron]
+    domain: "Security & Risk"
+
+  - id: knowledge
+    agents: [gamma, mu, kappa]
+    domain: "Knowledge & Research"
+
+  - id: infrastructure
+    agents: [delta, upsilon, lambda]
+    domain: "Infrastructure & Code"
+
+  - id: reasoning
+    agents: [theta, rho, pi, tau]
+    domain: "Reasoning & Mathematics"
+
+  - id: creative
+    agents: [eta, nu, phi, chi]
+    domain: "Creative & Multimodal"
+
+  - id: consciousness
+    agents: [psi, oversoul, metatron]
+    domain: "Consciousness & Synthesis"
+
+  - id: governance
+    agents: [omega, tessera]
+    domain: "Sovereignty & Architecture"

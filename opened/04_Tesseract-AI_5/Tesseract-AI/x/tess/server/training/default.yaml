@@ -1,0 +1,88 @@
+version: "1.0"
+name: "Default Training Configuration"
+
+training:
+  method: "lora"
+  baseModel: "llama3.2"
+  adapter: "ollama"
+
+  hyperparameters:
+    learningRate: 0.0002
+    batchSize: 4
+    epochs: 3
+    warmupSteps: 100
+    weightDecay: 0.01
+    gradientAccumulation: 4
+    maxSeqLength: 2048
+
+  loraConfig:
+    rank: 16
+    alpha: 32
+    dropout: 0.05
+    targetModules: [q_proj, v_proj, k_proj, o_proj]
+
+  dataPreparation:
+    chunkSize: 1024
+    overlapTokens: 128
+    minQualityScore: 0.6
+    deduplication: true
+    shuffleSeed: 42
+
+  dataSources:
+    - type: "knowledge_graph"
+      query: "SELECT content, domain FROM knowledge_graph WHERE quality_score >= 0.7 ORDER BY created_at DESC LIMIT 10000"
+      weight: 0.4
+
+    - type: "interaction_logs"
+      query: "SELECT prompt, response FROM interaction_logs WHERE quality >= 0.8 ORDER BY created_at DESC LIMIT 5000"
+      weight: 0.3
+
+    - type: "synthesized_insights"
+      query: "SELECT content FROM ai_insights WHERE confidence >= 0.7 ORDER BY created_at DESC LIMIT 5000"
+      weight: 0.2
+
+    - type: "evaluation_results"
+      query: "SELECT prompt, ideal_response FROM evaluation_results WHERE score >= 0.9 LIMIT 2000"
+      weight: 0.1
+
+evaluation:
+  runAfterTraining: true
+  tasks:
+    - id: reasoning
+      prompt: "If all A are B and some B are C, what can we conclude about A and C?"
+      expectedPattern: "cannot conclude"
+      weight: 0.25
+
+    - id: math
+      prompt: "Solve: What is the derivative of x^3 + 2x^2 - 5x + 1?"
+      expectedPattern: "3x.*\\+ 4x.*- 5"
+      weight: 0.25
+
+    - id: coding
+      prompt: "Write a function to find the longest common subsequence of two strings."
+      expectedPattern: "function|def|dp|dynamic"
+      weight: 0.25
+
+    - id: knowledge
+      prompt: "Explain the relationship between sacred geometry and quantum field theory."
+      expectedPattern: "topology|symmetry|geometric|field"
+      weight: 0.25
+
+  thresholds:
+    minimumPassRate: 0.75
+    regressionTolerance: 0.05
+    hallucinationMax: 0.10
+
+schedule:
+  frequency: "weekly"
+  dayOfWeek: "sunday"
+  hour: 3
+  timezone: "UTC"
+  maxDuration: 14400
+  notifyOnComplete: true
+
+output:
+  modelDir: "/models/fine-tuned"
+  checkpointInterval: 500
+  keepCheckpoints: 3
+  exportFormat: "gguf"

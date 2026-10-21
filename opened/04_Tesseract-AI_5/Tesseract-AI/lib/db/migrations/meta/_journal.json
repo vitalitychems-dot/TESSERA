@@ -1,0 +1,97 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1744000000000,
+      "tag": "0000_initial_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1744000001000,
+      "tag": "0001_memory_knowledge_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1744000002000,
+      "tag": "0002_agi_training_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1744000003000,
+      "tag": "0003_summit_vote_perspective",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1744000004000,
+      "tag": "0004_messages_agent_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1744000005000,
+      "tag": "0005_swarm_geometry_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1744000006000,
+      "tag": "0006_tda_conferences_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1744000007000,
+      "tag": "0007_knowledge_build_ledger",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1744000008000,
+      "tag": "0008_evaluation_provider_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1744000009000,
+      "tag": "0009_agent_economy_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1744000010000,
+      "tag": "0010_metacognition_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1744000011000,
+      "tag": "0011_metacognition_v2_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1744000012000,
+      "tag": "0012_detachment_protocol_tables",
+      "breakpoints": true
+    }
+  ]
+}
