@@ -1,0 +1,7 @@
+# Proven unit-test fixture at scripts/tessera-credential-guard.test.mjs:15.
+# Commit fingerprints only (commit:file:rule:line). The 3-part global form
+# would ignore this file and line on every commit, so it is not used.
+# Shape only: labeled expected-true input, value length 34, not a live key.
+# The fixture value is not copied here.
+1a6a43f4a2f673c1834b9d2e851379ee30ff1ae1:scripts/tessera-credential-guard.test.mjs:generic-api-key:15
+b69b9b782e1419eec4b9d909b7dc45839b7b0c33:scripts/tessera-credential-guard.test.mjs:generic-api-key:15

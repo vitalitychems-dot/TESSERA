@@ -1,6 +1,8 @@
 # TESSERA secret scan. Extends the gitleaks default rules.
 # Allowlists are exact captured secrets that are false positives.
 # There is no path blanket and no global ignore.
+# The two credential-guard fixture findings are commit fingerprints in
+# .gitleaksignore, not a path allowlist.
 
 title = "TESSERA"
 
@@ -24,22 +26,3 @@ regexes = ['''^fe05a71d3e4ed7d10bf68aa4eda6dd995ec070f4$''']
 description = "Log category captured from archived conference prose in archive/from-gitbook/archive/moved/collink1007-XXX/{tess,x/tess}/server/routes/algorithms.ts, next to the words access_log off. The captured value is the category label, not a credential."
 regexTarget = "secret"
 regexes = ['''^phase-7-untraceable$''']
-
-[[allowlists]]
-description = """
-Proven unit-test fixture at scripts/tessera-credential-guard.test.mjs:15 only.
-Both findings are that same line, on commits 1a6a43f4a2f673c1834b9d2e851379ee30ff1ae1
-(security/session-cookie-hardening-20261020) and b69b9b782e1419eec4b9d909b7dc45839b7b0c33
-(manus/session-cookie-hardening-20261017). The line sits inside the test
-"blocks labeled administrator and provider credentials" and is an expected-true
-input to containsCredentialMaterial. Shape only: one string literal, an API_KEY
-label, value length 34, placeholder alphabet. A live key of that vendor family
-is about 160 characters, so this value cannot be a live key. The two lines are
-byte-identical across those commits. Path and fingerprints are both required.
-This is not a blanket for the rest of the file and not a blanket for opened/.
-"""
-paths = ['''^scripts/tessera-credential-guard\.test\.mjs$''']
-fingerprints = [
-  '''1a6a43f4a2f673c1834b9d2e851379ee30ff1ae1:scripts/tessera-credential-guard.test.mjs:generic-api-key:15''',
-  '''b69b9b782e1419eec4b9d909b7dc45839b7b0c33:scripts/tessera-credential-guard.test.mjs:generic-api-key:15''',
-]

@@ -2,14 +2,14 @@
 
 Source: the `gitleaks` job of the Secret scan workflow, run 39682899501 (2026-10-21 17:01 CT, PR #524), which reported **250 findings**. The scan wrapper (`scripts/gitleaks-scan.mjs`) prints only `file:line rule-id`. Values were inspected locally by shape only (length, charset, decoded JWT header, and placeholder patterns). Masking keeps at most four characters of a value and then `****`. No full secret value appears in this file.
 
-No history was edited and nothing was rotated. One allowlist entry was added, for the two proven fixture findings at `scripts/tessera-credential-guard.test.mjs:15`. Every other finding stays flagged.
+No history was edited and nothing was rotated. The two proven fixture findings at `scripts/tessera-credential-guard.test.mjs:15` are ignored by commit fingerprints in the root `.gitleaksignore`. Every other finding stays flagged.
 
 ## Key finding: none of the 250 findings are on `main`
 
 `actions/checkout` with `fetch-depth: 0` fetches every branch, and `gitleaks detect` walks `git log --all`, so the job scans **every branch in the repo**, not just the PR or `main`. All 250 findings are on side branches:
 
 - 248 are on the seven archive branches `opened/01-XL1` … `opened/07-tesseract-consolidated` (the same findings repeated once per archived project copy).
-- 2 are in `scripts/tessera-credential-guard.test.mjs:15` on `security/session-cookie-hardening-20261020` (`1a6a43f4a2f673c1834b9d2e851379ee30ff1ae1`) and `manus/session-cookie-hardening-20261017` (`b69b9b782e1419eec4b9d909b7dc45839b7b0c33`). These two are also the only findings in the last `main` push run (39557493998, 2 findings). They are the allowlisted fixture below.
+- 2 are in `scripts/tessera-credential-guard.test.mjs:15` on `security/session-cookie-hardening-20261020` (`1a6a43f4a2f673c1834b9d2e851379ee30ff1ae1`) and `manus/session-cookie-hardening-20261017` (`b69b9b782e1419eec4b9d909b7dc45839b7b0c33`). These two are also the only findings in the last `main` push run (39557493998, 2 findings). They are the ignored fixture below.
 
 So every PR fails Secret scan because of branches it never touches. See suggestion 1 below.
 
@@ -52,17 +52,17 @@ Remaining flagged after the allowlist: **248** (likely-live 0, likely-fixture 8,
 - `FMB4****` is a 44-char base58 Solana token mint address (TSRT). It is public on-chain data, and `LIMN_TOKEN_CA` in the `.env.example` template is the same address. Public data stays **unknown**.
 - The 7 JWTs decode to header `alg: none` with one `role` claim and an empty signature. They are forged-token attack payloads in a security tester, classed **likely-fixture**.
 - The benchmark sample `sk-a****` is a const sample in `honest-benchmark.ts`, classed **likely-fixture**.
-- The line-15 credential-guard strings are the proven fixture and are **allowlisted**. Other strings in that test file were not part of this 250 and are not allowlisted.
+- The line-15 credential-guard strings are the proven fixture and are **ignored** by `.gitleaksignore` commit fingerprints. Other strings in that test file were not part of this 250 and are not ignored.
 
 Recommended action: no rotation. Nothing was removed. If a later scan turns up a likely-live credential, rotate it first, then move it to a secret store. Do not edit history.
 
-## Allowlisted (1 entry, 2 findings)
+## Ignored via `.gitleaksignore` (2 findings)
 
 | Rule | File:line | Why |
 | --- | --- | --- |
 | `generic-api-key` | `scripts/tessera-credential-guard.test.mjs:15` | Proven unit-test fixture. Same line on both commits above. Expected-true input to `containsCredentialMaterial` inside `blocks labeled administrator and provider credentials`. Shape: API_KEY label, value length 34, placeholder alphabet. Too short to be a live vendor key of that family. |
 
-The `.gitleaks.toml` entry requires both the exact path `scripts/tessera-credential-guard.test.mjs` and the two `commit:file:rule:line` fingerprints. The fixture value is not copied into the config.
+Gitleaks 8.30.1 does not read a `fingerprints` key on `[[allowlists]]`. Unknown keys are dropped, so that key does nothing. A `paths` entry for `scripts/tessera-credential-guard.test.mjs` would ignore every finding in the file, so that block is not in `.gitleaks.toml`. The two findings are ignored by commit fingerprints in the root `.gitleaksignore` (`commit:file:rule:line` only, not the 3-part global form). `scripts/gitleaks-scan.mjs` does not pass a flag that disables `.gitleaksignore`. Gitleaks 8.30.1 loads `<source>/.gitleaksignore` by default, and the Secret scan workflow runs that script with no extra ignore flags. The fixture value is not copied into the config or the ignore file.
 
 ## Findings still flagged
 
@@ -322,12 +322,13 @@ Each remaining finding is one row. Class is `likely-live`, `likely-fixture`, or 
 ## Suggested `.gitleaks.toml` changes (suggestions only, not applied)
 
 1. **Scope the CI scan (fixes 248 of 250 on every PR).** Scan only the commits the event brings in, for example `--log-opts="${BASE_SHA}..${HEAD_SHA}"` on pull requests and `--log-opts="${BEFORE}..${AFTER}"` on pushes, plus a periodic full scan. Or check out with `fetch-depth: 0` without fetching every other branch. This changes `scripts/gitleaks-scan.mjs` and the workflow, not the allowlist.
-2. **Line-scoped allowlists for the archive branches.** These match on the surrounding line, not the value, and keep the repo's existing "no path blanket" policy. The TSRT block and the "no API keys needed" block are limited to `^opened/` paths. They are still suggestions.
+2. **Line-scoped allowlists for the archive branches.** These match on the surrounding line, not the value, and keep the repo's existing "no path blanket" policy. Every suggestion block below is limited to `^opened/` paths. They are still suggestions.
 
 ```toml
 [[allowlists]]
 description = "Archive app data: secretLanguageId is a cipher-* label, not a credential (opened/* secret-society.json)"
 targetRules = ["generic-api-key"]
+paths = ['''^opened/''']
 regexTarget = "line"
 regexes = ['''"secretLanguageId":\s*"''']
 
@@ -341,6 +342,7 @@ regexes = ['''TSRT [Tt]oken''', '''tokenAddress:\s*"''', '''LIMN_TOKEN_CA=''']
 [[allowlists]]
 description = "Unsigned alg=none JWT used as a 'Token Forgery' attack payload in the security tester"
 targetRules = ["jwt"]
+paths = ['''^opened/''']
 regexTarget = "line"
 regexes = ['''name: "Token Forgery", payload: "''']
 
@@ -354,11 +356,12 @@ regexes = ['''no API keys needed:''']
 [[allowlists]]
 description = "Benchmark sample string in honest-benchmark.ts"
 targetRules = ["generic-api-key"]
+paths = ['''^opened/''']
 regexTarget = "line"
 regexes = ['''const secret = "password = ''']
 ```
 
-3. **Credential-guard test.** The line-15 fixture is already allowlisted by path plus fingerprint, in the section above. Do not add the fixture string as a secret regex. Other lines in `scripts/tessera-credential-guard.test.mjs` stay flagged. Rewriting fixtures with a `synthetic-` or `xxxx` marker so they stop matching is still open, and the values are not reproduced here.
+3. **Credential-guard test.** The line-15 fixture is ignored by two commit fingerprints in the root `.gitleaksignore`, not by a path allowlist. Do not add the fixture string as a secret regex. Other lines in `scripts/tessera-credential-guard.test.mjs` stay flagged. Rewriting fixtures with a `synthetic-` or `xxxx` marker so they stop matching is still open, and the values are not reproduced here.
 4. **Open decision for Father. Not adopted.** Excluding `opened/*` from the scan is not in effect. Whether those archive branches should be left out of Secret scan is an open decision for Father. This triage does not adopt that exclusion, and it does not delete or propose deleting any branch.
 
-_Triage by Computer (TESSERA orchestrator), 2026-10-21. Report-only. Classes are likely-live, likely-fixture, and unknown. One fixture allowlisted._
+_Triage by Computer (TESSERA orchestrator), 2026-10-21. Report-only. Classes are likely-live, likely-fixture, and unknown. Two fixture findings ignored via `.gitleaksignore`._
