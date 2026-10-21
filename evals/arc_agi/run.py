@@ -179,7 +179,7 @@ def main():
         "tests_with_any_attempt": sum(1 for d in done.values() for x in d["tests"] if x["n_attempts"]),
         "tasks_with_any_attempt": len(attempted),
         "precision_when_attempted": round(preds / max(1, sum(1 for d in done.values() for x in d["tests"] if x["n_attempts"])), 4),
-        "confidence_calibration": {k: {"n": v[0], "correct": v[1]} for k, v in sorted(buckets.items())},
+        "confidence_counts": {k: {"n": v[0], "correct": v[1]} for k, v in sorted(buckets.items())},
         "solved_task_ids": sorted(t for t, d in done.items() if d["solved"]),
         "environment": env, "utc_timestamp": stamp,
     }

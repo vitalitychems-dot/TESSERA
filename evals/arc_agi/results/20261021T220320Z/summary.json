@@ -28,7 +28,7 @@
   "tests_with_any_attempt": 26,
   "tasks_with_any_attempt": 23,
   "precision_when_attempted": 0.8846,
-  "confidence_calibration": {
+  "confidence_counts": {
     "0.50-0.75": {
       "n": 3,
       "correct": 2

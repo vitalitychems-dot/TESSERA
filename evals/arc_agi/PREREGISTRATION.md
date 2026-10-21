@@ -17,8 +17,9 @@ run type; report it separately and do not compare it as the same baseline.
 - **Tasks** = tasks whose test outputs are all correct, out of **400**.
 - A crash, timeout, empty answer, or task not started before the wall cap scores 0. The
   denominators stay 419 and 400 for a full run.
-- Also reported, not part of the score: tests attempted, precision when attempted, and a
-  confidence calibration table (4 buckets of the solver's self-reported confidence).
+- Also reported, not part of the score: tests attempted and precision when attempted.
+  Self-reported confidence is counted in four buckets. A bucket with n=3 is too small
+  to interpret (the 0.50-0.75 bin on the first run is 2/3, 95% CI [0.21, 0.94]).
 
 ## Solver (baseline)
 - `solvers/dsl_search.py`: breadth-first brute-force search over sequences of 44
