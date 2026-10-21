@@ -1,0 +1,23 @@
+# Initial TESSERA allowlist.
+# The collab allowed-hosts.txt was not in the five-file source.
+# These are the hosts the collab unit test requires to be present,
+# plus the badge and citation hosts named in docs/CODE-GATE.md.
+# Not a byte copy of the collab file.
+github.com
+api.github.com
+docs.github.com
+doc.libsodium.org
+owasp.org
+cheatsheetseries.owasp.org
+www.w3.org
+age-encryption.org
+csrc.nist.gov
+pages.nist.gov
+learn.microsoft.com
+passkeys.dev
+fidoalliance.org
+img.shields.io
+python.org
+zenodo.org
+doi.org
+brain-cog.network
