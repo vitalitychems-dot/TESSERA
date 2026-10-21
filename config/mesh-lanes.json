@@ -1,5 +1,5 @@
 {
-  "source": "Gitbook mesh/roles.md @71265e9 (15 rows, minus tessera-pen: not a lane) + rick, einstein, akhenaten",
+  "source": "Gitbook mesh/roles.md @71265e9 (15 rows, minus tessera-pen: not a lane) + rick, einstein, akhenaten + storage, memory, network, computer (collab mesh/TESSERA-BUILD-PLAN.md section 7; computer = orchestrator via mesh/drops/live_feed.md)",
   "lanes": [
     "gitbook-cordnation",
     "gitbook-moderator",
@@ -17,7 +17,11 @@
     "security",
     "rick",
     "einstein",
-    "akhenaten"
+    "akhenaten",
+    "storage",
+    "memory",
+    "network",
+    "computer"
   ],
   "sinks": [
     "owner-digest"
@@ -88,6 +92,22 @@
       "tessera"
     ],
     [
+      "storage",
+      "tessera"
+    ],
+    [
+      "memory",
+      "tessera"
+    ],
+    [
+      "network",
+      "tessera"
+    ],
+    [
+      "computer",
+      "tessera"
+    ],
+    [
       "tessera",
       "gitbook-cordnation"
     ],
@@ -150,6 +170,22 @@
     [
       "tessera",
       "akhenaten"
+    ],
+    [
+      "tessera",
+      "storage"
+    ],
+    [
+      "tessera",
+      "memory"
+    ],
+    [
+      "tessera",
+      "network"
+    ],
+    [
+      "tessera",
+      "computer"
     ],
     [
       "gitbook-moderator",
@@ -3030,6 +3066,22 @@
     [
       "father",
       "akhenaten"
+    ],
+    [
+      "father",
+      "storage"
+    ],
+    [
+      "father",
+      "memory"
+    ],
+    [
+      "father",
+      "network"
+    ],
+    [
+      "father",
+      "computer"
     ],
     [
       "father",
