@@ -27,12 +27,17 @@ import express from "express";
 import { createServer, type Server } from "node:http";
 import grandCouncilRouter from "../routes/grand-council";
 import omniversalRouter from "../routes/omniversal";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 
 describe("privileged 500 bodies", () => {
   let server: Server | undefined;
   let baseUrl = "";
+  const previousAdmin = process.env.TESSERACT_ADMIN_KEY;
+  const previousSession = process.env.SOVEREIGN_SESSION_SECRET;
 
   beforeAll(async () => {
+    process.env.TESSERACT_ADMIN_KEY = "synthetic-error-admin-key";
+    process.env.SOVEREIGN_SESSION_SECRET = "synthetic-error-session-secret-32chars!!";
     const app = express();
     app.use(express.json());
     app.use(grandCouncilRouter);
@@ -47,6 +52,10 @@ describe("privileged 500 bodies", () => {
   });
 
   afterAll(async () => {
+    if (previousAdmin === undefined) delete process.env.TESSERACT_ADMIN_KEY;
+    else process.env.TESSERACT_ADMIN_KEY = previousAdmin;
+    if (previousSession === undefined) delete process.env.SOVEREIGN_SESSION_SECRET;
+    else process.env.SOVEREIGN_SESSION_SECRET = previousSession;
     if (!server) return;
     await new Promise<void>((resolve, reject) => {
       server?.close((error) => (error ? reject(error) : resolve()));
@@ -59,6 +68,7 @@ describe("privileged 500 bodies", () => {
       headers: {
         "content-type": "application/json",
         "x-forwarded-for": "203.0.113.40",
+        cookie: `${SESSION_COOKIE}=${issueSession({ ip: "127.0.0.1", userAgent: "vitest" }).signedId}`,
       },
       body: "{}",
     });
@@ -74,6 +84,7 @@ describe("privileged 500 bodies", () => {
       headers: {
         "content-type": "application/json",
         "x-forwarded-for": "203.0.113.41",
+        cookie: `${SESSION_COOKIE}=${issueSession({ ip: "127.0.0.1", userAgent: "vitest" }).signedId}`,
       },
       body: "{}",
     });

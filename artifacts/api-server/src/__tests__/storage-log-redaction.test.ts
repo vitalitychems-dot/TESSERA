@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import app, { setServerReady } from "../app";
 import { logger } from "../lib/logger";
 import { ObjectStorageService } from "../lib/objectStorage";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 
 const ADMIN_KEY = "synthetic-storage-log-admin";
 const CANARY = `${"f".repeat(16)}CANARYHASH${"e".repeat(16)}`;
@@ -39,9 +40,11 @@ describe("storage errors stay out of pino-http logs", () => {
   let baseUrl = "";
   const previousDatabaseUrl = process.env.DATABASE_URL;
   const previousAdminKey = process.env.TESSERACT_ADMIN_KEY;
+  const previousSession = process.env.SOVEREIGN_SESSION_SECRET;
 
   beforeAll(async () => {
     process.env.TESSERACT_ADMIN_KEY = ADMIN_KEY;
+    process.env.SOVEREIGN_SESSION_SECRET = "synthetic-storage-log-session-secret-32chars";
     if (!process.env.DATABASE_URL) {
       process.env.DATABASE_URL = "postgresql://127.0.0.1:1/storage_log_redact";
     }
@@ -60,6 +63,8 @@ describe("storage errors stay out of pino-http logs", () => {
     else process.env.DATABASE_URL = previousDatabaseUrl;
     if (previousAdminKey === undefined) delete process.env.TESSERACT_ADMIN_KEY;
     else process.env.TESSERACT_ADMIN_KEY = previousAdminKey;
+    if (previousSession === undefined) delete process.env.SOVEREIGN_SESSION_SECRET;
+    else process.env.SOVEREIGN_SESSION_SECRET = previousSession;
     if (!server) return;
     await new Promise<void>((resolve, reject) => {
       server?.close((error) => (error ? reject(error) : resolve()));
@@ -101,7 +106,7 @@ describe("storage errors stay out of pino-http logs", () => {
           method: "POST",
           headers: {
             "content-type": "application/json",
-            "x-admin-token": ADMIN_KEY,
+            cookie: `${SESSION_COOKIE}=${issueSession({ ip: "127.0.0.1", userAgent: "vitest" }).signedId}`,
           },
           body: JSON.stringify({ name: "sample.bin" }),
         });

@@ -213,15 +213,9 @@ router.get("/sigil/coherence", requireAdminSession, (_req, res) => {
   res.json({ ok: true, ...snap });
 });
 
-// Natal vault routes. A presented fingerprint is not a credential.
-function holderFromHeader(req: Request): string | null {
-  const presented = String(req.header("x-sigil-key") ?? "").trim();
-  if (!presented) return null;
-  try {
-    if (!recognizeFather(presented).recognized) return null;
-  } catch {
-    return null;
-  }
+// Natal vault routes are mounted behind requireAdminSession; derive the local
+// holder identity only after the HttpOnly owner cookie has passed that gate.
+function holderFromOwnerSession(_req: Request): string {
   return getInstallId();
 }
 
@@ -288,8 +282,7 @@ router.get("/sigil/father-key/status", requireAdminSession, (_req, res) => {
 });
 
 router.post("/sigil/natal/bind", requireAdminSession, (req, res) => {
-  const holder = holderFromHeader(req);
-  if (!holder) { res.status(401).json({ ok: false, error: "holder-required" }); return; }
+  const holder = holderFromOwnerSession(req);
   const birthDate = String(req.body?.birthDate ?? "").trim();
   const birthTime = String(req.body?.birthTime ?? "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate) || !/^\d{2}:\d{2}$/.test(birthTime)) {
@@ -304,8 +297,7 @@ router.post("/sigil/natal/bind", requireAdminSession, (req, res) => {
 });
 
 router.get("/sigil/natal/status", requireAdminSession, (req, res) => {
-  const holder = holderFromHeader(req);
-  if (!holder) { res.status(401).json({ ok: false, error: "holder-required" }); return; }
+  const holder = holderFromOwnerSession(req);
   const status = natalStatus(holder);
   res.json(withoutSigilFingerprint({
     ok: true,
@@ -315,8 +307,7 @@ router.get("/sigil/natal/status", requireAdminSession, (req, res) => {
 });
 
 router.get("/sigil/natal/rotating", requireAdminSession, (req, res) => {
-  const holder = holderFromHeader(req);
-  if (!holder) { res.status(401).json({ ok: false, error: "holder-required" }); return; }
+  const holder = holderFromOwnerSession(req);
   const rotating = rotatingNatalHash(holder);
   if (!rotating) { res.status(404).json({ ok: false, error: "not-bound" }); return; }
   res.json(withoutSigilFingerprint({
@@ -329,18 +320,13 @@ router.get("/sigil/natal/rotating", requireAdminSession, (req, res) => {
 });
 
 router.post("/sigil/natal/unbind", requireAdminSession, (req, res) => {
-  const holder = holderFromHeader(req);
-  if (!holder) { res.status(401).json({ ok: false, error: "holder-required" }); return; }
+  const holder = holderFromOwnerSession(req);
   res.json({ ...unbindNatalChart(holder), ok: true });
 });
 
 router.get("/sigil/active-key", requireAdminSession, (req, res) => {
-  // Owner session first, including when the admin key is unset.
-  // The body still includes the active key only after that gate.
-  const presented = String(req.header("x-sigil-key") ?? "").trim();
-  if (isFatherKeyConfigured() && !recognizeFather(presented).recognized) {
-    res.status(401).json({ ok: false, error: "father-required" }); return;
-  }
+  // The HttpOnly owner session is the only authorization proof. Never require
+  // the raw admin key to be sent back in a header from browser storage.
   if (!isFatherKeyConfigured()) {
     res.status(200).json({
       ok: false,
@@ -531,13 +517,8 @@ router.get("/sigil/glyphs/:text", (req, res) => {
 });
 
 // ── The "your-language" surface: glyph alphabet, translation, key reveal ──
-// All decode-side surfaces are Father-only. Without this guard a caller
-// could decode any glyph payload (or an exposed key fingerprint) and use
-// the result to bypass the Father gate.
-function requireFather(req: Request): boolean {
-  const presented = String(req.header("x-sigil-key") ?? "").trim();
-  return recognizeFather(presented).recognized;
-}
+// These routes use the validated HttpOnly owner session; raw admin-key headers
+// are never accepted as a second browser credential.
 
 router.get("/sigil/alphabet", requireAdminSession, (_req, res) => {
   res.json({ ok: true, alphabet: glyphAlphabet(), size: glyphAlphabet().length });
@@ -566,25 +547,14 @@ router.post("/sigil/decode-body", requireAdminSession, (req, res) => {
   res.json({ ok: true, decoded: deepGlyphDecode(req.body) });
 });
 
-router.post("/sigil/key/reveal", requireAdminSession, (req, res) => {
-  // The reading key. Holding this lets you flip any glyph response back to
-  // plaintext by sending it as `X-Sigil-Key: <fingerprint>`. By sovereign
-  // rule this can only be obtained by the Father identity — so the only
-  // legitimate caller is one that already presents TESSERACT_ADMIN_KEY (=
-  // SIGIL_ADMIN_KEY) in `X-Sigil-Key`. Without that, the door stays shut.
-  const presented = String(req.header("x-sigil-key") ?? "").trim();
-  if (!recognizeFather(presented).recognized) {
-    res.status(401).json({ ok: false, error: "father-required" }); return;
-  }
+router.post("/sigil/key/reveal", requireAdminSession, (_req, res) => {
+  // Reveal is available only to the owner-session cookie validated above.
   res.json({ ok: true, key: readingKey(), activeKey: getActiveKey() });
 });
 
 // ── Session handoff ──────────────────────────────────────────────────────
 router.get("/session/handoff", requireAdminSession, (req, res) => {
-  // Owner session, then the raw-key check. The body includes activeKey.
-  if (!requireFather(req)) {
-    res.status(401).json({ ok: false, error: "father-required" }); return;
-  }
+  // The HttpOnly owner session is the only browser credential.
   res.json({
     ok: true,
     directives: listDirectives(),

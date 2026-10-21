@@ -5,8 +5,9 @@
 // — never silently open. No credential material logged.
 
 import type { Request, Response, NextFunction } from "express";
-import { SESSION_COOKIE, lookupSession, isAdminTokenConfigured, isSessionSigningConfigured, verifyAdminToken } from "./sovereign-session";
+import { SESSION_COOKIE, lookupSession, isAdminTokenConfigured, isSessionSigningConfigured } from "./sovereign-session";
 import { logger } from "./logger";
+import { validateMeshToken } from "./mesh-auth";
 
 export interface AdminRequest extends Request {
   adminSession?: { issuedAt: number; expiresAt: number };
@@ -24,6 +25,12 @@ function readCookie(req: Request, name: string): string | undefined {
     if (k === name) return decodeURIComponent(rest.join("="));
   }
   return undefined;
+}
+
+function hasLegacyAdminHeader(req: Request): boolean {
+  return ["x-admin-token", "x-tesseract-admin-key"].some((name) =>
+    typeof req.headers[name] === "string",
+  );
 }
 
 export type OwnerSessionDecision =
@@ -50,35 +57,24 @@ export function decideOwnerSession(req: Request): OwnerSessionDecision {
   return { ok: true, issuedAt: lookup.record.issuedAt, expiresAt: lookup.record.expiresAt };
 }
 
-const ADMIN_KEY_MIN_LENGTH = 16;
-
 export type FatherAuthorization =
   | { fatherAuthorized: true }
   | { fatherAuthorized: false; reason: "absent" | "rejected" | "unconfigured" };
 
-/**
- * fatherAuthorized is true only after verifyAdminToken (minimum length, then
- * timingSafeEqual against TESSERACT_ADMIN_KEY) or a valid owner session.
- * A present header that fails that check is rejected. Header presence alone
- * is never enough. A missing header with no session is absent, not rejected.
- */
+/** Father authorization is derived only from the server-validated HttpOnly owner session. */
 export function resolveFatherAuthorization(req: Request): FatherAuthorization {
-  const configured = (process.env.TESSERACT_ADMIN_KEY ?? "").trim();
-  const raw = req.header("x-tesseract-admin-key");
-  const headerPresent = typeof raw === "string";
-  if (!configured) {
-    if (headerPresent) return { fatherAuthorized: false, reason: "unconfigured" };
-    return { fatherAuthorized: false, reason: "absent" };
-  }
-  if (headerPresent) {
-    const presented = raw.trim();
-    if (presented.length >= ADMIN_KEY_MIN_LENGTH && verifyAdminToken(presented)) {
-      return { fatherAuthorized: true };
-    }
-    return { fatherAuthorized: false, reason: "rejected" };
-  }
-  if (decideOwnerSession(req).ok) return { fatherAuthorized: true };
-  return { fatherAuthorized: false, reason: "absent" };
+  if (hasLegacyAdminHeader(req)) return { fatherAuthorized: false, reason: "rejected" };
+  const decision = decideOwnerSession(req);
+  if (decision.ok) return { fatherAuthorized: true };
+  if (decision.status === 503) return { fatherAuthorized: false, reason: "unconfigured" };
+  const headerPresent = typeof req.header("x-tesseract-admin-key") === "string";
+  return { fatherAuthorized: false, reason: headerPresent ? "rejected" : "absent" };
+}
+
+/** Return the configured admin key's mesh identity only after a valid owner cookie. */
+export function getOwnerSessionKeyHash(req: Request): string | null {
+  if (hasLegacyAdminHeader(req) || !decideOwnerSession(req).ok) return null;
+  return validateMeshToken(process.env.TESSERACT_ADMIN_KEY);
 }
 
 export function requireAdminSession(req: AdminRequest, res: Response, next: NextFunction): void {
@@ -106,6 +102,11 @@ export function requireAdminSession(req: AdminRequest, res: Response, next: Next
         ? "SOVEREIGN_SESSION_SECRET is not configured. Privileged surfaces are fail-closed."
         : "TESSERACT_ADMIN_KEY is not configured. Privileged surfaces are fail-closed.",
     });
+    return;
+  }
+  if (hasLegacyAdminHeader(req)) {
+    logger.warn({ reason: "legacy-credential-header-forbidden" }, "admin-session denied");
+    res.status(401).json({ ok: false, error: "unauthenticated", reason: "legacy-credential-header-forbidden" });
     return;
   }
   req.adminSession = { issuedAt: decision.issuedAt, expiresAt: decision.expiresAt };

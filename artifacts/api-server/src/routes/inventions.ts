@@ -5,6 +5,7 @@ import { inventionsTable, pinnedDiagramsTable, insertPinnedDiagramSchema, type I
 import { desc, eq, and } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { logger } from "../lib/logger";
+import { decideOwnerSession } from "../lib/sovereign-admin";
 import { hashStringFNV, getRealityFlag } from "../lib/reality-audit";
 import {
   seedFeasibility, seedNovelty, resolveSeedInventionId, abstainIncrement,
@@ -844,21 +845,11 @@ function inventorPrincipal(proposedBy: string | null | undefined, inventionId: s
   return `proposer:${createHash("sha256").update(raw).digest("hex").slice(0, 32)}`;
 }
 
-// Admin guard: fail-closed. Heavy Council P5 — accepts the new
-// `sovereign_session` HttpOnly cookie (preferred) or the legacy x-admin-token
-// header (deprecated, retained transitionally). Both paths run the same
-// constant-time check; both require an admin token to be configured on the
-// server (TESSERACT_ADMIN_KEY only).
-async function requireInventorAuth(req: import("express").Request): Promise<boolean> {
-  const { isAdminTokenConfigured, lookupSession, SESSION_COOKIE, verifyAdminToken } = await import("../lib/sovereign-session");
-  if (!isAdminTokenConfigured()) return false;
-  const cookies = (req as import("express").Request & { cookies?: Record<string, string> }).cookies;
-  const cookieVal = cookies?.[SESSION_COOKIE];
-  if (cookieVal && lookupSession(cookieVal).valid) return true;
-  // Legacy header path — still works during migration.
-  const token = (req.headers["x-admin-token"] as string | undefined)?.trim();
-  if (!token || token.length < 8) return false;
-  return verifyAdminToken(token);
+// Admin guard: fail-closed. Heavy Council P5 — accepts only the validated
+// `sovereign_session` HttpOnly cookie; legacy admin-key headers are rejected.
+// The server must have TESSERACT_ADMIN_KEY configured.
+function requireInventorAuth(req: import("express").Request): boolean {
+  return decideOwnerSession(req).ok;
 }
 
 // Request a presigned URL for uploading a custom 3D model (GLB/GLTF) to an
@@ -867,7 +858,7 @@ async function requireInventorAuth(req: import("express").Request): Promise<bool
 router.post("/inventions/:id/model/upload-url", async (req, res) => {
   try {
     if (!(await requireInventorAuth(req))) {
-      return res.status(401).json({ ok: false, error: "Admin token required to upload invention models" });
+      return res.status(401).json({ ok: false, error: "Authenticated admin session required to upload invention models" });
     }
     const { id } = req.params;
     const { name, contentType } = (req.body || {}) as { name?: string; contentType?: string };
@@ -900,7 +891,7 @@ router.post("/inventions/:id/model/upload-url", async (req, res) => {
 router.patch("/inventions/:id/model", async (req, res) => {
   try {
     if (!(await requireInventorAuth(req))) {
-      return res.status(401).json({ ok: false, error: "Admin token required to modify invention models" });
+      return res.status(401).json({ ok: false, error: "Authenticated admin session required to modify invention models" });
     }
     const { id } = req.params;
     const { objectPath } = (req.body || {}) as { objectPath?: string | null };

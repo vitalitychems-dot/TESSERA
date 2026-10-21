@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { swarmTasksTable, swarmReasoningTracesTable } from "@workspace/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
-import { validateMeshToken } from "../lib/mesh-auth";
+import { getOwnerSessionKeyHash } from "../lib/sovereign-admin";
 import { meshBroadcast } from "../lib/mesh-bus";
 import { getSpawnerState, getSpawnerMetrics } from "../lib/agent-spawner";
 import { getAgentHierarchy, getHierarchyMetrics } from "../lib/agent-hierarchy";
@@ -248,9 +248,7 @@ router.post("/swarm/tasks", async (req, res) => {
       }
     }
 
-    const rawToken = req.headers["x-admin-token"];
-    const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
-    const keyHash = validateMeshToken(token ?? "");
+    const keyHash = getOwnerSessionKeyHash(req);
     if (keyHash) {
       meshBroadcast(keyHash, "swarm:task-saved", {
         taskId,

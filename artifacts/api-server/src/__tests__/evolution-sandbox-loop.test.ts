@@ -217,13 +217,16 @@ describe("/api/evolution-health/attempts — auth regression", () => {
     // Lazy-load express + the route (avoids server bootstrap)
     const express = (await import("express")).default;
     const router = (await import("../routes/evolution-health")).default;
+    const { issueSession, SESSION_COOKIE } = await import("../lib/sovereign-session");
     const app = express();
     app.use("/api", router);
 
     const prevToken = process.env["ADMIN_TOKEN"];
     const prevKey = process.env["TESSERACT_ADMIN_KEY"];
+    const prevSession = process.env["SOVEREIGN_SESSION_SECRET"];
     process.env["ADMIN_TOKEN"] = "test-admin-token-xyz";
     process.env["TESSERACT_ADMIN_KEY"] = "test-admin-token-xyz";
+    process.env["SOVEREIGN_SESSION_SECRET"] = "synthetic-evolution-sandbox-session-32chars";
 
     try {
       const server = app.listen(0);
@@ -237,8 +240,9 @@ describe("/api/evolution-health/attempts — auth regression", () => {
         });
         expect(garbage.status).toBe(401);
 
+        const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
         const withAuth = await fetch(`http://127.0.0.1:${port}/api/evolution-health/attempts`, {
-          headers: { "x-admin-token": "test-admin-token-xyz" },
+          headers: { cookie: `${SESSION_COOKIE}=${issued.signedId}` },
         });
         expect(withAuth.status).toBe(200);
         const body = await withAuth.json() as { ok: boolean; data: { attempts: unknown[]; counts: Record<string, number>; total: number } };
@@ -254,6 +258,8 @@ describe("/api/evolution-health/attempts — auth regression", () => {
       else process.env["ADMIN_TOKEN"] = prevToken;
       if (prevKey === undefined) delete process.env["TESSERACT_ADMIN_KEY"];
       else process.env["TESSERACT_ADMIN_KEY"] = prevKey;
+      if (prevSession === undefined) delete process.env["SOVEREIGN_SESSION_SECRET"];
+      else process.env["SOVEREIGN_SESSION_SECRET"] = prevSession;
     }
   });
 });

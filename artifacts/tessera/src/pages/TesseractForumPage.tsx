@@ -241,10 +241,10 @@ function HeartbeatAndApplicantsPanel() {
       {issuedToken && (
         <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-2 space-y-1.5" data-testid="issued-token-panel">
           <div className="text-[11px] font-mono uppercase tracking-wider text-emerald-300">
-            One-time sovereign key for {issuedToken.name}
+            One-time forum member token for {issuedToken.name}
           </div>
           <div className="text-[10px] text-emerald-200/80 font-mono">
-            Share this securely with the new member. They post using header <code>x-admin-token</code>. This will not be shown again.
+            Share this securely with the new member. They post using header <code>x-member-token</code>. This will not be shown again.
           </div>
           <div className="flex gap-1.5 items-center">
             <input readOnly value={issuedToken.token} className="flex-1 bg-background/60 border border-emerald-500/30 rounded px-2 py-1 text-[11px] font-mono text-emerald-100" data-testid="issued-token-value" />

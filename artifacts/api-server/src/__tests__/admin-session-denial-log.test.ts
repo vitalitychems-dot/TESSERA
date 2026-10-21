@@ -25,7 +25,7 @@ describe("admin session denial log", () => {
     const warn = vi.spyOn(logger, "warn");
     const status = vi.fn().mockReturnThis();
     const json = vi.fn();
-    const req = { path, headers: {}, header: () => undefined } as unknown as AdminRequest;
+      const req = { path, query: {}, headers: {}, header: () => undefined } as unknown as AdminRequest;
     const res = { status, json } as unknown as Response;
     const next = vi.fn() as unknown as NextFunction;
     try {

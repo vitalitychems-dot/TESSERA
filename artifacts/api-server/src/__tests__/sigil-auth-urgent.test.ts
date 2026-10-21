@@ -178,14 +178,13 @@ describe("sigil auth urgent", () => {
     });
   }
 
-  it("rejects a fingerprint header or body on natal unbind even with a session", async () => {
+  it("allows natal unbind with an owner session without any raw-key header", async () => {
     const fingerprint = presentedFingerprint();
-    const headerOnly = await send("POST", "/sigil/natal/unbind", {
-      cookie: ownerCookie(),
-      sigilKey: fingerprint,
-    });
-    expect(headerOnly.status).toBe(401);
-    await expect(headerOnly.json()).resolves.toMatchObject({ ok: false, error: "holder-required" });
+    const headerOnly = await send("POST", "/sigil/natal/unbind", { cookie: ownerCookie() });
+    expect(headerOnly.status).toBe(200);
+    const headerOnlyBody = await headerOnly.json();
+    expect(containsCredential(headerOnlyBody, fingerprint)).toBe(false);
+    expect(containsKey(headerOnlyBody, "fingerprint")).toBe(false);
 
     const withHolder = await send("POST", "/sigil/natal/unbind", {
       cookie: ownerCookie(),

@@ -34,8 +34,10 @@ vi.mock("../lib/session-mesh", async (importOriginal) => {
 
 import { logger } from "../lib/logger";
 import meshRouter from "../routes/mesh";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 
 const previousKey = process.env.TESSERACT_ADMIN_KEY;
+const previousSession = process.env.SOVEREIGN_SESSION_SECRET;
 
 function restoreKey(): void {
   if (previousKey === undefined) delete process.env.TESSERACT_ADMIN_KEY;
@@ -67,10 +69,13 @@ describe("mesh generic 500 bodies", () => {
     faults.stats = false;
     faults.sessions = false;
     process.env.TESSERACT_ADMIN_KEY = ADMIN_KEY;
+    process.env.SOVEREIGN_SESSION_SECRET = "synthetic-mesh-route-session-secret-32chars";
   });
 
   afterAll(async () => {
     restoreKey();
+    if (previousSession === undefined) delete process.env.SOVEREIGN_SESSION_SECRET;
+    else process.env.SOVEREIGN_SESSION_SECRET = previousSession;
     if (!server) return;
     await new Promise<void>((resolve, reject) => {
       server?.close((error) => (error ? reject(error) : resolve()));
@@ -106,8 +111,9 @@ describe("mesh generic 500 bodies", () => {
     faults.sessions = true;
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => undefined as never);
     try {
+      const session = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
       const response = await fetch(`${baseUrl}/mesh/sessions/${adminHash()}`, {
-        headers: { "x-admin-token": ADMIN_KEY },
+        headers: { cookie: `${SESSION_COOKIE}=${session.signedId}` },
       });
       expect(response.status).toBe(500);
       const text = await response.text();
