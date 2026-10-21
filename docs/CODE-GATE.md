@@ -106,18 +106,19 @@ Labels follow the mesh rules: TESTED means rerun on the head of this pull reques
 
 This is the TESSERA copy of the collab code gate at merge `eb81e932` (collab #283). The programs are `scripts/code-gate/gate.py`, `test_gate.py`, and `fn_harness.py`. The workflow stays at `scripts/code-gate/tessera-mesh-sync.yml.example`. This change does not install that file under `.github/workflows`, does not add a CODEOWNERS file, and does not change branch protection.
 
-`scripts/code-gate/allowed-hosts.txt` is the collab file from merge `eb81e932`, byte for byte. SHA-256 `45cbe486bb214a8276297f79b0e9693821fc7b9fb32095e69d4ec8335e743105`. No TESSERA-only host was added. The unit tests read this file. No test was rewritten onto an inline fixture.
+`scripts/code-gate/allowed-hosts.txt` started as the collab file from merge `eb81e932` (SHA-256 `45cbe486bb214a8276297f79b0e9693821fc7b9fb32095e69d4ec8335e743105`). Two hosts were added after that, each with a one-line reason: `eslint.org` (the ESLint version-support host in `pnpm-lock.yaml`) and `api.mainnet-beta.solana.com` (the default RPC host in the api-server wallet observer). No wildcard, raw IP, or private host was added. The unit tests read this file. No test was rewritten. `gate.py` was not edited.
 
 Feature flags stay at 0. The false-positive scan for this repository is `origin/main~20..origin/main` with this allowlist and no worktree root, matching the example workflow (size comes from added diff bytes). The collab window in Measurements above is unchanged and was not rerun here.
 
-TESSERA window (TESTED, base `dc1a003856e09a5b1ed52c5d4fdea91b99351470`, head `dc21f0fd6b38a4ce3a7ccbc958e2ffc21b969df6`): 7,427 added lines in code and config files (7,546 added text lines in 121 files). 6 blocking findings, 0 suppressed. Unit tests on this pull request: 38 passed (TESTED). False-negative harness: caught 240/240 (SYNTHETIC, TESTED).
+TESSERA window (TESTED, base `dc1a003856e09a5b1ed52c5d4fdea91b99351470`, head `dc21f0fd6b38a4ce3a7ccbc958e2ffc21b969df6`): 7,427 added lines in code and config files (7,546 added text lines in 121 files). After the two hosts above, 4 blocking findings remain, 0 suppressed. Unit tests on this pull request: 38 passed (TESTED). False-negative harness: caught 240/240 (SYNTHETIC, TESTED).
 
-One finding is a public URL inside held-out eval source text: `evals/heldout/retrieval/split.json:156` `net-public-url`. It is not fixed here.
+Two `net-public-url` hits are allowed by those hosts. The other four stay flagged. Source files were not edited to hide them. Database hits cannot be suppressed. Raw IPs and the `.local` test origin were not added to the allowlist.
 
-Five are false positives specific to this repo. None are fixed here.
-
-- `artifacts/api-server/src/__tests__/gm1-secfix.test.ts:69` `net-public-url` — a `.local` test origin, not a public host.
-- `artifacts/api-server/src/__tests__/heldout-answer-key.test.ts:183` `net-public-ip` — a sandbox test that expects the outbound connect to fail.
-- `pnpm-lock.yaml:2910` `net-public-url` — a lockfile deprecation notice pointing at a documentation site.
-- `preview/src/lib/tessera/firm-combo.ts:36` `net-public-ip` — a fixture asserting that a public address is not a private host.
-- `preview/src/lib/tessera/suite-rules.ts:114` `db-nonlocal-host` — a negative check that a nonlocal database URL is rejected.
+| Finding | Rule | Verdict | Reason |
+| --- | --- | --- | --- |
+| `evals/heldout/retrieval/split.json:156` | `net-public-url` | allowed | Same Solana RPC host the api-server wallet observer uses. |
+| `artifacts/api-server/src/__tests__/gm1-secfix.test.ts:69` | `net-public-url` | still flagged | `.local` test origin, not a host this repo calls. |
+| `artifacts/api-server/src/__tests__/heldout-answer-key.test.ts:183` | `net-public-ip` | still flagged | Raw IP in a sandbox test. The allowlist does not take raw IPs. |
+| `pnpm-lock.yaml:2910` | `net-public-url` | allowed | ESLint version-support host recorded for the eslint dependency. |
+| `preview/src/lib/tessera/firm-combo.ts:36` | `net-public-ip` | still flagged | Raw IP in a private-host fixture. The allowlist does not take raw IPs. |
+| `preview/src/lib/tessera/suite-rules.ts:114` | `db-nonlocal-host` | still flagged | Negative database check. Database rules cannot be suppressed, and the allowlist does not relax them. |

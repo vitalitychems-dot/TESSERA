@@ -22,3 +22,7 @@ python.org
 zenodo.org
 doi.org
 brain-cog.network
+# ESLint version-support host cited by the eslint deprecation notice in pnpm-lock.yaml.
+eslint.org
+# Default public Solana RPC host used by the api-server wallet observer.
+api.mainnet-beta.solana.com
