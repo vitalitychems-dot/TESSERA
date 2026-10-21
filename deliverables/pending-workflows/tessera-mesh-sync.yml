@@ -1,14 +1,13 @@
 # ==============================================================================
 # ROLE IDENTIFICATION: Local simulation scaffold for the TESSERA monorepo.
 # No web scraping, no remote quantum execution, and no automatic git commits
-# to main. This pending workflow commits ledger files on mesh-sync/ledger and
-# opens a draft pull request.
+# to main. Manual only (workflow_dispatch) until a ledger step exists. When
+# run, it commits ledger files on mesh-sync/ledger and opens a draft pull request.
 # ==============================================================================
 name: Tessera Sovereign Mesh Synchronizer
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -94,7 +93,7 @@ jobs:
           git commit -m "sync: mesh ledger update
 
           Original-Author: Computer
-          Co-authored-by: Computer <computer@users.noreply.github.com>"
+          Co-authored-by: Computer <332565808+vitalitychems-dot@users.noreply.github.com>"
 
           dest="$BRANCH"
           case "$dest" in
