@@ -122,3 +122,12 @@ Two `net-public-url` hits are allowed by those hosts. The other four stay flagge
 | `pnpm-lock.yaml:2910` | `net-public-url` | allowed | ESLint version-support host recorded for the eslint dependency. |
 | `preview/src/lib/tessera/firm-combo.ts:36` | `net-public-ip` | still flagged | Raw IP in a private-host fixture. The allowlist does not take raw IPs. |
 | `preview/src/lib/tessera/suite-rules.ts:114` | `db-nonlocal-host` | still flagged | Negative database check. Database rules cannot be suppressed, and the allowlist does not relax them. |
+
+## Known full-tree findings
+
+The pull request gate scans the pull request diff and passes. These four fixtures are already on the default branch, so they are outside that diff. They appear only in a full-tree scan. No exemption was added. Revisit this list if a full-tree scan becomes a required check.
+
+- `artifacts/api-server/src/__tests__/gm1-secfix.test.ts:69` `net-public-url` — `.local` test origin.
+- `artifacts/api-server/src/__tests__/heldout-answer-key.test.ts:183` `net-public-ip` — sandbox raw IP.
+- `preview/src/lib/tessera/firm-combo.ts:36` `net-public-ip` — private-host fixture.
+- `preview/src/lib/tessera/suite-rules.ts:114` `db-nonlocal-host` — negative database check.
