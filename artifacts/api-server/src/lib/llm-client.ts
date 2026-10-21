@@ -2,6 +2,7 @@ import { logger } from "./logger";
 import { lookupCache, storeInCache, getCacheStats } from "./semantic-cache";
 import { lookupKnowledge, distillFromResponse } from "./knowledge-distillation";
 import { applyDreamToMessages } from "./dream-prompt-bridge";
+import { isTesseraPenEnabled } from "./pen-switch";
 import { isSovereignNoExternalLlm, resolveTesseraLlmModel, tesseraChatCompletion } from "./tessera-llm-http";
 
 export interface LLMMessage {
@@ -224,10 +225,7 @@ const TESSERA_PEN_SYSTEM_PROMPT = [
   "Do not claim authority to push, merge, delete, deploy, change credentials, or make payments.",
 ].join(" ");
 
-export function isTesseraPenEnabled(): boolean {
-  const value = (process.env.TESSERA_PEN_ENABLED ?? "0").trim().toLowerCase();
-  return value === "1" || value === "true";
-}
+export { isTesseraPenEnabled };
 
 export async function callTesseraPen(
   messages: LLMMessage[],
