@@ -4,7 +4,7 @@ Headline: **20 / 400 tasks** solved on the full public evaluation split. 95% CI 
 
 Predictions correct on that same run: 23 / 419. Wall time 75.6 s (cap not hit). Run directory: `results/20261021T220320Z`.
 
-The final OK waits on Einstein's cloud rerun `bc-c67d08c3`.
+Einstein's final on `#526` at `014f669f` is OK-WITH-FIXES. An independent rerun of the preregistered command reproduced the scores: 23/419 predictions and 20/400 tasks.
 
 ## Erratum
 
@@ -12,7 +12,10 @@ The pull request text said the solver uses 47 transforms. The code that ran (`so
 
 ## Per-task logs
 
-`results/20261021T220320Z/tasks.json` and `results/20261021T220320Z/confidence.jsonl` are listed in `evals/arc_agi/.gitignore` and are not in commit `014f669f` or any other commit on this branch. The bytes are not in the repository, so this file does not invent sha256 hashes for them. Add the files, or their hashes, once the baseline artifacts are recovered.
+`results/20261021T220320Z/tasks.json` and `results/20261021T220320Z/confidence.jsonl` stay gitignored. Those logs include wall-clock fields, so this file records the stable canonical sha256 values instead. Both were recomputed here from the pinned evaluation files and from a full rerun of `solvers/dsl_search.py` (`--seed 20261021 --task-time-limit 8 --total-time-limit 600 --workers 6`). Each full digest matches the audit prefix and suffix.
+
+- Dataset sha256, over the 400 evaluation files in sorted filename order, updating with `filename + NUL + file bytes`: `4d9a15441fd20199f4fb419641ead13aaef357695abcc7e0ea243e3548a16dfb`
+- Prediction sha256, over the canonical per-task record (correctness, attempt count, confidence, programs, `n_consistent`, depth, timeout flag; `seconds` removed), serialized with `json.dumps(..., sort_keys=True, separators=(",", ":"))`: `053614f979f55874abf7025bf7c459c869395571190256579c9eb186f2a0caa9`
 
 ## Self-reported confidence
 
