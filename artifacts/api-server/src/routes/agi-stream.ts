@@ -2,7 +2,7 @@
  * #7: SSE stream of global-workspace broadcasts (GET /api/agi/stream).
  *
  * Security hardening (Security review of c3b6f87, 2 HIGH):
- *  - auth: owner session or x-tesseract-admin-key, via the existing
+ *  - auth: validated HttpOnly owner-session cookie only, via the existing
  *    resolveFatherAuthorization() gate; fail-closed 503 when unconfigured.
  *  - connection caps: global and per-IP, plus the hard cap on the workspace
  *    listener Set (trySubscribeWorkspace).

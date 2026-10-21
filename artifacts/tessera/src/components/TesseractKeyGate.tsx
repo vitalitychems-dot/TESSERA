@@ -14,6 +14,7 @@ const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/");
 type GateState =
   | { kind: "loading" }
   | { kind: "unconfigured" }
+  | { kind: "session-secret-missing" }
   | { kind: "locked"; reason?: string }
   | { kind: "submitting" }
   | { kind: "invalid"; reason?: string }
@@ -66,6 +67,7 @@ async function postLogout(): Promise<void> {
 
 function classifyStatus(s: StatusResponse | null): GateState {
   if (!s) return { kind: "locked", reason: "network" };
+  if (s.reason === "session-signing-unconfigured") return { kind: "session-secret-missing" };
   if (!s.configured) return { kind: "unconfigured" };
   if (s.authenticated && s.expiresAt) return { kind: "unlocked", expiresAt: s.expiresAt };
   if (s.reason === "expired") return { kind: "expired" };
@@ -101,29 +103,34 @@ function RecoveryPanel() {
       {open && (
         <ol className="mt-3 space-y-3 text-xs text-muted-foreground">
           <li>
-            <div className="font-semibold text-foreground">1. Generate a new token</div>
+            <div className="font-semibold text-foreground">1. Generate the admin key</div>
             <div className="mt-1 flex items-center gap-2">
               <code className="flex-1 px-2 py-1 rounded bg-background font-mono text-primary text-[11px]">openssl rand -base64 48 | tr -d '\n'</code>
               <CopyButton text={"openssl rand -base64 48 | tr -d '\\n'"} />
             </div>
           </li>
           <li>
-            <div className="font-semibold text-foreground">2. Save it in Replit Secrets</div>
-            <div className="mt-1 text-muted-foreground">
-              Set the secret <code className="px-1 py-0.5 rounded bg-background text-foreground">TESSERACT_ADMIN_KEY</code> to the value from step 1.
-            </div>
-          </li>
-          <li>
-            <div className="font-semibold text-foreground">3. Restart the API workflow</div>
-            <div className="mt-1 text-muted-foreground">In the workspace, restart <code className="px-1 py-0.5 rounded bg-background">artifacts/api-server: API Server</code>.</div>
-          </li>
-          <li>
-            <div className="font-semibold text-foreground">4. Verify the gate</div>
+            <div className="font-semibold text-foreground">2. Generate a separate session-signing secret</div>
             <div className="mt-1 flex items-center gap-2">
-              <code className="flex-1 px-2 py-1 rounded bg-background font-mono text-primary text-[11px]">curl -sS $REPLIT_DEV_DOMAIN/api/admin/session/status</code>
-              <CopyButton text={"curl -sS $REPLIT_DEV_DOMAIN/api/admin/session/status"} />
+              <code className="flex-1 px-2 py-1 rounded bg-background font-mono text-primary text-[11px]">openssl rand -base64 48 | tr -d '\n'</code>
+              <CopyButton text={"openssl rand -base64 48 | tr -d '\\n'"} />
             </div>
-            <div className="mt-1 text-muted-foreground">Should return <code>{"{\"configured\":true,\"authenticated\":false}"}</code>. Then unlock here.</div>
+          </li>
+          <li>
+            <div className="font-semibold text-foreground">3. Save both values in the host's private secret store</div>
+            <div className="mt-1 text-muted-foreground">Use <code className="px-1 py-0.5 rounded bg-background text-foreground">TESSERACT_ADMIN_KEY</code> for the admin key and <code className="px-1 py-0.5 rounded bg-background text-foreground">SOVEREIGN_SESSION_SECRET</code> for the signing secret. Never put either value in chat, logs, or Git.</div>
+          </li>
+          <li>
+            <div className="font-semibold text-foreground">4. Restart the API service</div>
+            <div className="mt-1 text-muted-foreground">Restart the server after saving both secrets.</div>
+          </li>
+          <li>
+            <div className="font-semibold text-foreground">5. Verify the gate</div>
+            <div className="mt-1 flex items-center gap-2">
+              <code className="flex-1 px-2 py-1 rounded bg-background font-mono text-primary text-[11px]">curl -sS https://&lt;your-host&gt;/api/admin/session/status</code>
+              <CopyButton text={"curl -sS https://<your-host>/api/admin/session/status"} />
+            </div>
+            <div className="mt-1 text-muted-foreground">Expect configured=true and authenticated=false before entering the admin key here.</div>
           </li>
         </ol>
       )}
@@ -191,29 +198,39 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
   }, [state]);
 
   const submit = async () => {
-    const tok = tokenInput.trim();
+    let tok = tokenInput.trim();
     if (!tok) {
       setState({ kind: "invalid", reason: "empty" });
       return;
     }
+    setTokenInput("");
     setState({ kind: "submitting" });
-    const result = await postUnlock(tok);
-    if (result.ok) {
-      setTokenInput("");
-      setState({ kind: "unlocked", expiresAt: result.expiresAt });
-      return;
+    try {
+      const result = await postUnlock(tok);
+      if (result.ok) {
+        setState({ kind: "unlocked", expiresAt: result.expiresAt });
+        return;
+      }
+      if (result.status === 429) {
+        const retry = (result.body as { retryAfterMs?: number })?.retryAfterMs ?? 60_000;
+        setState({ kind: "rate-limited", retryAfterMs: retry });
+        setTimeout(() => setState({ kind: "locked" }), retry);
+        return;
+      }
+      if (result.status === 503 && (result.body as { error?: string })?.error === "session-signing-unconfigured") {
+        setState({ kind: "session-secret-missing" });
+        return;
+      }
+      if (result.status === 503) {
+        setState({ kind: "unconfigured" });
+        return;
+      }
+      setState({ kind: "invalid", reason: (result.body as { error?: string })?.error });
+    } catch {
+      setState({ kind: "locked", reason: "network" });
+    } finally {
+      tok = "";
     }
-    if (result.status === 429) {
-      const retry = (result.body as { retryAfterMs?: number })?.retryAfterMs ?? 60_000;
-      setState({ kind: "rate-limited", retryAfterMs: retry });
-      setTimeout(() => setState({ kind: "locked" }), retry);
-      return;
-    }
-    if (result.status === 503) {
-      setState({ kind: "unconfigured" });
-      return;
-    }
-    setState({ kind: "invalid", reason: (result.body as { error?: string })?.error });
   };
 
   const logout = async () => {
@@ -252,6 +269,21 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
     );
   }
 
+  if (state.kind === "session-secret-missing") {
+    return (
+      <Frame
+        tone="rose"
+        title="◈ Tesseract — session signing is not configured"
+        body={
+          <div className="mt-3 space-y-3 text-sm text-foreground">
+            <p>The server cannot safely sign an admin session. The admin key is not enough by itself.</p>
+            <p className="text-muted-foreground">Configure <code className="px-1 py-0.5 rounded bg-background text-foreground">SOVEREIGN_SESSION_SECRET</code> (32+ characters) in the host's private secret store, restart the API, then verify status. The submitted key was cleared and no session was created.</p>
+          </div>
+        }
+      />
+    );
+  }
+
   if (state.kind === "rate-limited") {
     const secs = Math.ceil(state.retryAfterMs / 1000);
     return (
@@ -268,6 +300,7 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
   const isInvalid = state.kind === "invalid";
   const isSubmitting = state.kind === "submitting";
   const isExpired = state.kind === "expired";
+  const isNetworkError = state.kind === "locked" && state.reason === "network";
 
   return (
     <Frame
@@ -276,8 +309,8 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
       body={
         <div className="mt-3 space-y-3 text-sm text-foreground">
           <p>
-            Present your <span className="text-primary font-semibold">sovereign admin token</span>.
-            One credential, one session — no rotating signal, no second key.
+            Present the <span className="text-primary font-semibold">canonical server admin key</span>.
+            It is used only to request an HttpOnly session; do not enter a separate chat sigil here.
           </p>
           <input
             type="password"
@@ -296,6 +329,9 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
           )}
           {isExpired && (
             <p className="text-xs text-destructive">Your previous session expired. Re-present your token to continue.</p>
+          )}
+          {isNetworkError && (
+            <p className="text-xs text-destructive">The session service could not be reached. The submitted key was cleared; check the API service before trying again.</p>
           )}
           <button
             type="button"

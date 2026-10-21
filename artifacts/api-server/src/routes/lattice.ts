@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { logger } from "../lib/logger";
-import { validateMeshToken } from "../lib/mesh-auth";
+import { getOwnerSessionKeyHash } from "../lib/sovereign-admin";
 import { lookupForumIdentity, lookupTokenPrincipal } from "../lib/forum-identity-registry";
 import {
   authorAndSignDeclaration,
@@ -18,11 +18,9 @@ import { getShepherdAudit, getShepherdAuditStats, recordShepherdAudit, requireSh
 const router: IRouter = Router();
 
 function requireAuth(req: Request, res: Response): string | null {
-  const raw = req.headers["x-admin-token"];
-  const token = Array.isArray(raw) ? raw[0] : raw;
-  const keyHash = validateMeshToken(token);
+  const keyHash = getOwnerSessionKeyHash(req);
   if (!keyHash) {
-    res.status(401).json({ ok: false, error: "Sovereign key required to access the lattice" });
+    res.status(401).json({ ok: false, error: "Authenticated admin session required to access the lattice" });
     return null;
   }
   return keyHash;

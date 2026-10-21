@@ -91,12 +91,17 @@ import { logger } from "../lib/logger";
 import { validateMeshToken } from "../lib/mesh-auth";
 import { pruneMeshSessions, registerSession, removeSession } from "../lib/session-mesh";
 import forumRouter from "../routes/forum";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 
 const previousKey = process.env.TESSERACT_ADMIN_KEY;
+const previousSession = process.env.SOVEREIGN_SESSION_SECRET;
+const SESSION_SECRET = "synthetic-admin-hash-session-secret-32chars";
 
 function restoreKey(): void {
   if (previousKey === undefined) delete process.env.TESSERACT_ADMIN_KEY;
   else process.env.TESSERACT_ADMIN_KEY = previousKey;
+  if (previousSession === undefined) delete process.env.SOVEREIGN_SESSION_SECRET;
+  else process.env.SOVEREIGN_SESSION_SECRET = previousSession;
 }
 
 function sha256Hex(value: string): string {
@@ -221,6 +226,7 @@ describe("admin key hashes stay out of logs", () => {
     harness.principal = null;
     harness.bound = [];
     process.env.TESSERACT_ADMIN_KEY = ADMIN_KEY;
+    process.env.SOVEREIGN_SESSION_SECRET = SESSION_SECRET;
   });
 
   afterAll(async () => {
@@ -240,6 +246,7 @@ describe("admin key hashes stay out of logs", () => {
     delete process.env.TESSERACT_ADMIN_KEY;
     expect(validateMeshToken(ADMIN_KEY)).toBeNull();
     process.env.TESSERACT_ADMIN_KEY = ADMIN_KEY;
+    process.env.SOVEREIGN_SESSION_SECRET = SESSION_SECRET;
   });
 
   it("logs key presence when a valid admin session is registered and removed", () => {
@@ -306,7 +313,10 @@ describe("admin key hashes stay out of logs", () => {
     try {
       const headers = new Headers({ "content-type": "application/json" });
       const token = tokenFor(kind);
-      if (token) headers.set("x-admin-token", token);
+      if (kind === "valid") {
+        const session = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+        headers.set("cookie", `${SESSION_COOKIE}=${session.signedId}`);
+      } else if (token) headers.set("x-admin-token", token);
       const response = await fetch(`${baseUrl}${path}`, {
         method: "POST",
         headers,

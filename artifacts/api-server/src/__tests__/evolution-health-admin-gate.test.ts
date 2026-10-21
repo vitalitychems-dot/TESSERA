@@ -3,8 +3,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import express from "express";
 import { _resetThrottleForTests, getThrottleMetrics } from "../lib/evolution-throttle";
 import evolutionHealthRouter from "../routes/evolution-health";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 
 const ADMIN_ENV = "TESSERACT_ADMIN_KEY";
+const SESSION_ENV = "SOVEREIGN_SESSION_SECRET";
+const SESSION_SECRET = "synthetic-session-secret-for-evo-health";
 const CONFIGURED_KEY = "synthetic-evo-health-key";
 const SHORT_KEY = "short-evo-key";
 const WRONG_TOKEN = "wrong-evo-health-token";
@@ -14,7 +17,7 @@ const UNCONFIGURED = {
   error: "sovereign-unconfigured",
   message: "TESSERACT_ADMIN_KEY is not configured. Privileged surfaces are fail-closed.",
 };
-const UNAUTHORIZED = { ok: false, error: "Valid sovereign key required" };
+const UNAUTHORIZED = { ok: false, error: "unauthenticated", reason: "no-cookie" };
 
 const GATED = [
   { method: "GET", path: "/evolution-health/attempts" },
@@ -36,6 +39,7 @@ describe("evolution-health admin gate", () => {
   let server: Server | undefined;
   let baseUrl = "";
   const previousAdmin = process.env[ADMIN_ENV];
+  const previousSession = process.env[SESSION_ENV];
 
   beforeAll(async () => {
     expect(SHORT_KEY.length).toBeLessThan(16);
@@ -57,11 +61,13 @@ describe("evolution-health admin gate", () => {
   beforeEach(() => {
     _resetThrottleForTests();
     process.env[ADMIN_ENV] = CONFIGURED_KEY;
+    process.env[SESSION_ENV] = SESSION_SECRET;
   });
 
   afterAll(async () => {
     _resetThrottleForTests();
     restore(ADMIN_ENV, previousAdmin);
+    restore(SESSION_ENV, previousSession);
     if (!server) return;
     await new Promise<void>((resolve, reject) => {
       server?.close((error) => (error ? reject(error) : resolve()));
@@ -70,7 +76,12 @@ describe("evolution-health admin gate", () => {
 
   async function send(method: "GET" | "POST", path: string, token?: string): Promise<Response> {
     const headers = new Headers();
-    if (token !== undefined) headers.set("x-admin-token", token);
+    if (token === CONFIGURED_KEY && process.env[ADMIN_ENV] === CONFIGURED_KEY) {
+      const session = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+      headers.set("cookie", `${SESSION_COOKIE}=${session.signedId}`);
+    } else if (token !== undefined) {
+      headers.set("x-admin-token", token);
+    }
     return fetch(`${baseUrl}${path}`, { method, headers });
   }
 
@@ -106,7 +117,7 @@ describe("evolution-health admin gate", () => {
     }
   });
 
-  it("returns 401 for every gated handler when the key is configured and the token is missing or wrong", async () => {
+  it("returns 401 for every gated handler when the key is configured and the session cookie is missing", async () => {
     for (const route of GATED) {
       const missing = await send(route.method, route.path);
       await expectClosed(missing, 401, UNAUTHORIZED);
@@ -115,7 +126,7 @@ describe("evolution-health admin gate", () => {
     }
   });
 
-  it("returns 200 for every gated handler when the configured key is presented", async () => {
+  it("returns 200 for every gated handler when a valid owner session cookie is presented", async () => {
     for (const route of GATED) {
       const response = await send(route.method, route.path, CONFIGURED_KEY);
       expect(response.status).toBe(200);

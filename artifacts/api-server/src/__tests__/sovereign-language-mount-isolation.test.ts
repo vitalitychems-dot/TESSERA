@@ -4,6 +4,7 @@ import { createServer, type Server } from "node:http";
 import apiRouter from "../routes/index";
 import { stopAutonomousRotation } from "../lib/sovereign-cipher";
 import { stopBandRotationScheduler } from "../lib/lattice-frequency-bands";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 
 const ADMIN_ENV = "TESSERACT_ADMIN_KEY";
 const SESSION_ENV = "SOVEREIGN_SESSION_SECRET";
@@ -16,7 +17,6 @@ const SESSION_503 = {
   error: "sovereign-unconfigured",
   message: "TESSERACT_ADMIN_KEY is not configured. Privileged surfaces are fail-closed.",
 };
-const LEDGER_401 = { ok: false, error: "Valid sovereign key required — ledger writes are privileged" };
 
 function restore(name: string, value: string | undefined): void {
   if (value === undefined) delete process.env[name];
@@ -84,7 +84,7 @@ describe("sovereign language gate stays inside its mount", () => {
     };
   }
 
-  it("leaves a later route, an x-admin-token caller, and metrics on their previous responses", async () => {
+  it("leaves public routes intact, rejects bearer keys, and accepts the owner session cookie", async () => {
     process.env[ADMIN_ENV] = SYNTHETIC_ADMIN_KEY;
 
     const later = await send("GET", "/api/red-team/stats");
@@ -115,12 +115,22 @@ describe("sovereign language gate stays inside its mount", () => {
       actionKind: "synthetic-action",
     });
     expect(missingToken.status).toBe(401);
-    expect(JSON.parse(missingToken.text)).toEqual(LEDGER_401);
+    expect(JSON.parse(missingToken.text)).toEqual(SESSION_401);
 
-    const attested = await send(
+    const legacyBearer = await send(
       "POST",
       "/api/sovereign-ledger/attest",
       { "x-admin-token": SYNTHETIC_ADMIN_KEY },
+      { agentId: "synthetic-agent", actionKind: "synthetic-action" },
+    );
+    expect(legacyBearer.status).toBe(401);
+    expect(JSON.parse(legacyBearer.text)).toEqual(SESSION_401);
+
+    const session = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+    const attested = await send(
+      "POST",
+      "/api/sovereign-ledger/attest",
+      { cookie: `${SESSION_COOKIE}=${session.signedId}` },
       { agentId: "synthetic-agent", actionKind: "synthetic-action" },
     );
     expect(attested.status).toBe(200);
@@ -148,8 +158,8 @@ describe("sovereign language gate stays inside its mount", () => {
         { "x-admin-token": "synthetic-token-not-configured" },
         { agentId: "synthetic-agent", actionKind: "synthetic-action" },
       );
-      expect(tokenWhileUnset.status).toBe(401);
-      expect(JSON.parse(tokenWhileUnset.text)).toEqual(LEDGER_401);
+      expect(tokenWhileUnset.status).toBe(503);
+      expect(JSON.parse(tokenWhileUnset.text)).toEqual(SESSION_503);
     } finally {
       process.env[ADMIN_ENV] = SYNTHETIC_ADMIN_KEY;
     }

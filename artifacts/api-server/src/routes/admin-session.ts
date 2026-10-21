@@ -10,6 +10,7 @@ import { originAllowed } from "../lib/origin-allowed";
 import {
   SESSION_COOKIE,
   isAdminTokenConfigured,
+  isSessionSigningConfigured,
   verifyAdminToken,
   issueSession,
   lookupSession,
@@ -99,7 +100,17 @@ router.post("/admin/session", adminSessionRateLimit, requireSameOrigin, (req: Re
     res.status(503).json({
       ok: false,
       error: "sovereign-unconfigured",
-      message: "TESSERACT_ADMIN_KEY is not configured. Set it in Replit Secrets and restart the API workflow.",
+      message: "TESSERACT_ADMIN_KEY is not configured. Set it in the host's private secret store and restart the API service.",
+    });
+    return;
+  }
+  if (!isSessionSigningConfigured()) {
+    auditTail(503);
+    res.status(503).json({
+      ok: false,
+      configured: false,
+      error: "session-signing-unconfigured",
+      message: "Set SOVEREIGN_SESSION_SECRET (at least 32 characters) in the server secret store and restart the API.",
     });
     return;
   }
@@ -124,7 +135,11 @@ router.post("/admin/session", adminSessionRateLimit, requireSameOrigin, (req: Re
 // GET /api/admin/session/status — never reveals credential material.
 router.get("/admin/session/status", (req: Request, res: Response) => {
   if (!isAdminTokenConfigured()) {
-    res.status(200).json({ ok: true, configured: false, authenticated: false });
+    res.status(200).json({ ok: true, configured: false, authenticated: false, reason: "sovereign-unconfigured" });
+    return;
+  }
+  if (!isSessionSigningConfigured()) {
+    res.status(200).json({ ok: true, configured: false, authenticated: false, reason: "session-signing-unconfigured" });
     return;
   }
   const cookie = readCookie(req);

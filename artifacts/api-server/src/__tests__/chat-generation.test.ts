@@ -32,7 +32,7 @@ describe("configured Tessera chat generation", () => {
   it("loads newest history and restores chronological order before bounding the prompt", () => {
     const route = readFileSync(new URL("../routes/conversations.ts", import.meta.url), "utf8");
     expect(route).toMatch(/orderBy\(desc\(messagesTable\.createdAt\), desc\(messagesTable\.id\)\)\s*\.limit\(40\)/);
-    expect(route).toContain("history: history.reverse().map");
+    expect(route).toMatch(/const safeHistory = history\.reverse\(\)\.map\([\s\S]*redactCredentialMaterial\(message\.content\)/);
     const history = Array.from({ length: 40 }, (_, index) => ({ role: "assistant", content: `turn-${index}` }));
     const messages = buildTesseraChatMessages({ history, userMessage: "current turn" });
     expect(messages[1]?.content).toBe("turn-32");

@@ -5,6 +5,7 @@ import { type Message } from "@/lib/types";
 import { puterChat, isPuterAvailable, tesseractSwarm, PUTER_MODELS, type SwarmAgentResponse, type SwarmComm } from "@/lib/puter-ai";
 import { appendTesseraVoice, enforceTesseraVoice, isIdentityQuestion } from "@/lib/tessera-voice";
 import type { ExecutionResultData } from "@/components/chat/CodeExecutionResult";
+import { containsCredentialMaterial } from "@/lib/credential-guard";
 
 export interface AgentInfo {
   id: string;
@@ -70,10 +71,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
     queryFn: async () => {
       if (!conversationId) return [];
       const url = buildUrl("/api/messages", { conversationId });
-      const adminToken = localStorage.getItem("t9_admin_token") || "";
-      const headers: Record<string, string> = {};
-      if (adminToken) headers["x-admin-token"] = adminToken;
-      const res = await fetch(url, { credentials: "include", headers });
+      const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch messages");
       return (await res.json()) as Message[];
     },
@@ -129,6 +127,10 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
 
   const sendMessage = useCallback(async (content: string) => {
     if (!conversationId || isStreaming) return;
+    if (containsCredentialMaterial(content)) {
+      setError("Message blocked: remove credentials and enter them only through the secure session gate.");
+      return;
+    }
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -163,13 +165,9 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
 
     if (tesseractMode) {
       try {
-        const adminToken = localStorage.getItem("t9_admin_token") || "";
-        const saveHeaders: Record<string, string> = { "Content-Type": "application/json" };
-        if (adminToken) saveHeaders["x-admin-token"] = adminToken;
-
         fetch(`/api/conversations/${conversationId}/puter-save`, {
           method: "POST",
-          headers: saveHeaders,
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ content, role: "user" }),
           credentials: "include",
         }).catch(() => {});
@@ -183,7 +181,6 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
         try {
           const url = buildUrl("/api/messages", { conversationId });
           const headers: Record<string, string> = { "Content-Type": "application/json" };
-          if (adminToken) headers["x-admin-token"] = adminToken;
           let nlpGoals: string[] = [];
           try {
             const rawGoals = localStorage.getItem("t9_nlp_goals_raw") || "";
@@ -306,7 +303,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
 
           fetch(`/api/conversations/${conversationId}/puter-save`, {
             method: "POST",
-            headers: saveHeaders,
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ content: finalResponse, role: "assistant", model: "tesseract-unified" }),
             credentials: "include",
           }).catch(() => {});
@@ -343,9 +340,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
 
     try {
       const url = buildUrl("/api/messages", { conversationId });
-      const adminToken = localStorage.getItem("t9_admin_token") || "";
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (adminToken) headers["x-admin-token"] = adminToken;
       let nlpGoalsNonTesseract: string[] = [];
       try {
         const rawGoals = localStorage.getItem("t9_nlp_goals_raw") || "";
@@ -549,18 +544,15 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
     const userMsg: Message = { id: Date.now(), conversationId, role: "user", content: userText, createdAt: now };
     const assistantMsg: Message = { id: Date.now() + 1, conversationId, role: "assistant", content: assistantText, createdAt: new Date(now.getTime() + 1) };
     queryClient.setQueryData(queryKey, (old: Message[] = []) => [...old, userMsg, assistantMsg]);
-    const adminToken = localStorage.getItem("t9_admin_token") || "";
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (adminToken) headers["x-admin-token"] = adminToken;
     fetch(`/api/conversations/${conversationId}/puter-save`, {
       method: "POST",
-      headers,
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content: userText, role: "user" }),
       credentials: "include",
     }).catch(() => {});
     fetch(`/api/conversations/${conversationId}/puter-save`, {
       method: "POST",
-      headers,
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content: assistantText, role: "assistant" }),
       credentials: "include",
     }).catch(() => {});

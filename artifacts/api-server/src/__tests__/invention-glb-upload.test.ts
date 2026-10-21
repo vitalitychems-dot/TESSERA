@@ -83,6 +83,7 @@ vi.mock("../lib/objectAcl", () => {
 import { buildInvention3DBlock } from "../lib/invention-3d";
 import { parse3DObjectBlocks } from "./helpers/parse3dobj";
 import inventionsRouter from "../routes/inventions";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 
 const TEST_INVENTION_ID = "test-glb-e2e-" + Math.random().toString(36).slice(2, 10);
 const SECOND_INVENTION_ID = "test-glb-e2e-other-" + Math.random().toString(36).slice(2, 10);
@@ -90,22 +91,34 @@ const TEST_ADMIN_TOKEN = "test-admin-token-for-glb-upload";
 const LEGACY_TEST_ADMIN_TOKEN = "legacy-admin-token-for-glb-upload";
 const previousSovereignAdminToken = process.env["SOVEREIGN_ADMIN_TOKEN"];
 const previousTesseractAdminKey = process.env["TESSERACT_ADMIN_KEY"];
+const previousSessionSecret = process.env["SOVEREIGN_SESSION_SECRET"];
+const TEST_SESSION_SECRET = "vitest-only-session-signing-secret-0123456789";
 
 let app: Express;
 let server: Server;
 let baseUrl: string;
 
+function requestHeaders(headers: Record<string, string>): Record<string, string> {
+  const hasLegacyAdminHeader = Object.keys(headers).some((name) =>
+    ["x-admin-token", "x-tesseract-admin-key"].includes(name.toLowerCase()),
+  );
+  const ownerCookie: Record<string, string> = hasLegacyAdminHeader
+    ? {}
+    : { cookie: `${SESSION_COOKIE}=${issueSession({ ip: "127.0.0.1", userAgent: "vitest" }).signedId}` };
+  return { "content-type": "application/json", ...ownerCookie, ...headers };
+}
+
 async function postJson(path: string, body: unknown, headers: Record<string, string> = {}) {
   return await fetch(`${baseUrl}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json", "x-admin-token": TEST_ADMIN_TOKEN, ...headers },
+    headers: requestHeaders(headers),
     body: JSON.stringify(body),
   });
 }
 async function patchJson(path: string, body: unknown, headers: Record<string, string> = {}) {
   return await fetch(`${baseUrl}${path}`, {
     method: "PATCH",
-    headers: { "content-type": "application/json", "x-admin-token": TEST_ADMIN_TOKEN, ...headers },
+    headers: requestHeaders(headers),
     body: JSON.stringify(body),
   });
 }
@@ -116,6 +129,7 @@ beforeAll(async () => {
   // in the developer or CI environment.
   process.env["TESSERACT_ADMIN_KEY"] = TEST_ADMIN_TOKEN;
   process.env["SOVEREIGN_ADMIN_TOKEN"] = TEST_ADMIN_TOKEN;
+  process.env["SOVEREIGN_SESSION_SECRET"] = TEST_SESSION_SECRET;
 
   // Fake "GCS" PUT endpoint so the test can perform a REAL PUT against the
   // signed URL and assert the bytes/content-type traveled through.
@@ -180,6 +194,8 @@ afterAll(async () => {
     else process.env["SOVEREIGN_ADMIN_TOKEN"] = previousSovereignAdminToken;
     if (previousTesseractAdminKey === undefined) delete process.env["TESSERACT_ADMIN_KEY"];
     else process.env["TESSERACT_ADMIN_KEY"] = previousTesseractAdminKey;
+    if (previousSessionSecret === undefined) delete process.env["SOVEREIGN_SESSION_SECRET"];
+    else process.env["SOVEREIGN_SESSION_SECRET"] = previousSessionSecret;
   }
 });
 
@@ -209,7 +225,7 @@ describe.skipIf(!HAS_DB)("GLB upload flow (presign -> PUT -> PATCH -> chat rende
     expect(res.status).toBe(400);
   });
 
-  it("accepts the legacy TESSERACT admin token during migration", async () => {
+  it("rejects a raw legacy TESSERACT admin token without a session cookie", async () => {
     delete process.env["SOVEREIGN_ADMIN_TOKEN"];
     process.env["TESSERACT_ADMIN_KEY"] = LEGACY_TEST_ADMIN_TOKEN;
 
@@ -219,7 +235,7 @@ describe.skipIf(!HAS_DB)("GLB upload flow (presign -> PUT -> PATCH -> chat rende
         { name: "model.png" },
         { "x-admin-token": LEGACY_TEST_ADMIN_TOKEN },
       );
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(401);
     } finally {
       process.env["TESSERACT_ADMIN_KEY"] = TEST_ADMIN_TOKEN;
       process.env["SOVEREIGN_ADMIN_TOKEN"] = TEST_ADMIN_TOKEN;

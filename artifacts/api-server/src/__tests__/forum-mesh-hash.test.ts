@@ -149,12 +149,16 @@ vi.mock("@workspace/db", () => ({
 
 import { logger } from "../lib/logger";
 import forumRouter from "../routes/forum";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 
 const previousKey = process.env.TESSERACT_ADMIN_KEY;
+const previousSession = process.env.SOVEREIGN_SESSION_SECRET;
 
 function restoreKey(): void {
   if (previousKey === undefined) delete process.env.TESSERACT_ADMIN_KEY;
   else process.env.TESSERACT_ADMIN_KEY = previousKey;
+  if (previousSession === undefined) delete process.env.SOVEREIGN_SESSION_SECRET;
+  else process.env.SOVEREIGN_SESSION_SECRET = previousSession;
 }
 
 function sha256Hex(value: string): string {
@@ -187,6 +191,7 @@ describe("forum token hashing handlers", () => {
     harness.bound = [];
     harness.cacheInvalidations = 0;
     process.env.TESSERACT_ADMIN_KEY = ADMIN_KEY;
+    process.env.SOVEREIGN_SESSION_SECRET = "synthetic-forum-mesh-session-secret-32chars";
   });
 
   afterAll(async () => {
@@ -199,7 +204,10 @@ describe("forum token hashing handlers", () => {
 
   async function post(path: string, body?: unknown, token?: string | null): Promise<Response> {
     const headers = new Headers();
-    if (token) headers.set("x-admin-token", token);
+    if (token === ADMIN_KEY) {
+      const session = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+      headers.set("cookie", `${SESSION_COOKIE}=${session.signedId}`);
+    } else if (token) headers.set("x-admin-token", token);
     if (body !== undefined) headers.set("content-type", "application/json");
     return fetch(`${baseUrl}${path}`, {
       method: "POST",
@@ -225,7 +233,7 @@ describe("forum token hashing handlers", () => {
     expect(missing.status).toBe(401);
     await expect(missing.json()).resolves.toEqual({
       ok: false,
-      error: "Valid sovereign key required to post in the forum",
+      error: "Authenticated admin session required to post as Father",
     });
 
     const wrong = await post("/tesseract-forum/applicants/7/approve", undefined, WRONG_KEY);

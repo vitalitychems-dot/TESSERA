@@ -2,19 +2,12 @@ import { Router, type Request, type Response } from "express";
 import { requireAdminSession } from "../lib/sovereign-admin";
 import { createProposal, getAllProposals, getProposal, getConsensusMetrics, GRAND_COUNCIL_AGENTS, drainRetryQueue } from "../lib/consensus-engine";
 import { getExecutorMetrics, getSystemConfig, updateSystemConfig } from "../lib/council-executor";
-import { validateMeshToken } from "../lib/mesh-auth";
 
 const router = Router();
 
 const INVALID_CONFIG = { ok: false, error: "invalid config" } as const;
 
-router.post("/consensus/drain-queue", async (req: Request, res: Response) => {
-  const rawToken = req.headers["x-admin-token"];
-  const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
-  if (!validateMeshToken(token)) {
-    res.status(401).json({ ok: false, error: "Valid sovereign key required" });
-    return;
-  }
+router.post("/consensus/drain-queue", requireAdminSession, async (_req: Request, res: Response) => {
   try {
     const result = await drainRetryQueue(100);
     res.json({ ok: true, data: result });

@@ -109,13 +109,19 @@ describe("privacy e limiters and admin key sources", () => {
       `${baseUrl}/admin/reflection/metrics?tesseractAdminKey=${encodeURIComponent(ADMIN_KEY)}`,
     );
     expect(queried.status).toBe(403);
+    expect(queried.headers.get("cache-control")).toBe("no-store");
     const header = await fetch(`${baseUrl}/admin/reflection/metrics`, {
       headers: { "x-tesseract-admin-key": ADMIN_KEY },
     });
-    expect(header.status).toBe(200);
+    expect(header.status).toBe(401);
+    const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+    const session = await fetch(`${baseUrl}/admin/reflection/metrics`, {
+      headers: { cookie: `${SESSION_COOKIE}=${issued.signedId}` },
+    });
+    expect(session.status).toBe(200);
   });
 
-  it("fails closed on grand-evolution and ignores body and query keys", async () => {
+  it("fails closed on grand-evolution and ignores body, query, and retired header keys", async () => {
     delete process.env.TESSERACT_ADMIN_KEY;
     const unset = await fetch(`${baseUrl}/grand-evolution/run-async`, { method: "POST" });
     expect(unset.status).toBe(503);
@@ -125,7 +131,7 @@ describe("privacy e limiters and admin key sources", () => {
       `${baseUrl}/grand-evolution/run-async?adminKey=${encodeURIComponent(ADMIN_KEY)}`,
       { method: "POST" },
     );
-    expect(fromQuery.status).toBe(401);
+    expect(fromQuery.status).toBe(403);
     const fromBody = await fetch(`${baseUrl}/grand-evolution/run-async`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -136,7 +142,13 @@ describe("privacy e limiters and admin key sources", () => {
       method: "POST",
       headers: { "x-tesseract-admin-key": ADMIN_KEY },
     });
-    expect(fromHeader.status).toBe(200);
+    expect(fromHeader.status).toBe(401);
+    const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+    const fromSession = await fetch(`${baseUrl}/grand-evolution/run-async`, {
+      method: "POST",
+      headers: { cookie: `${SESSION_COOKIE}=${issued.signedId}` },
+    });
+    expect(fromSession.status).toBe(200);
   });
 
   it("does not run the grand-evolution cycle for a wrong admin key", async () => {

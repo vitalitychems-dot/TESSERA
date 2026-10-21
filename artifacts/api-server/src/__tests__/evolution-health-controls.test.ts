@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import express from "express";
 
 const ADMIN_KEY = "synthetic-evolution-key";
+const SESSION_SECRET = "synthetic-session-secret-for-evolution-controls";
 const WRONG_KEY = "wrong-evolution-token";
 const MARKER = "synthetic-evolution-fault-marker";
 
@@ -40,12 +41,16 @@ vi.mock("../lib/evolution-throttle", async (importOriginal) => {
 import { logger } from "../lib/logger";
 import { _resetThrottleForTests, getThrottleMetrics } from "../lib/evolution-throttle";
 import evolutionHealthRouter from "../routes/evolution-health";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 
 const previousKey = process.env.TESSERACT_ADMIN_KEY;
+const previousSession = process.env.SOVEREIGN_SESSION_SECRET;
 
 function restoreKey(): void {
   if (previousKey === undefined) delete process.env.TESSERACT_ADMIN_KEY;
   else process.env.TESSERACT_ADMIN_KEY = previousKey;
+  if (previousSession === undefined) delete process.env.SOVEREIGN_SESSION_SECRET;
+  else process.env.SOVEREIGN_SESSION_SECRET = previousSession;
 }
 
 describe("evolution-health pause, resume, and reset", () => {
@@ -71,6 +76,7 @@ describe("evolution-health pause, resume, and reset", () => {
     faults.reset = false;
     _resetThrottleForTests();
     process.env.TESSERACT_ADMIN_KEY = ADMIN_KEY;
+    process.env.SOVEREIGN_SESSION_SECRET = SESSION_SECRET;
   });
 
   afterAll(async () => {
@@ -84,7 +90,12 @@ describe("evolution-health pause, resume, and reset", () => {
 
   async function post(path: string, token?: string | null): Promise<Response> {
     const headers = new Headers();
-    if (token) headers.set("x-admin-token", token);
+    if (token === ADMIN_KEY) {
+      const session = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+      headers.set("cookie", `${SESSION_COOKIE}=${session.signedId}`);
+    } else if (token) {
+      headers.set("x-admin-token", token);
+    }
     return fetch(`${baseUrl}${path}`, { method: "POST", headers });
   }
 
@@ -113,18 +124,18 @@ describe("evolution-health pause, resume, and reset", () => {
   ];
 
   for (const route of routes) {
-    it(`returns 401 for ${route.path} with no key and with the wrong key`, async () => {
+    it(`rejects missing cookies and legacy key headers for ${route.path}`, async () => {
       const missing = await post(route.path);
       expect(missing.status).toBe(401);
-      await expect(missing.json()).resolves.toEqual({ ok: false, error: "Valid sovereign key required" });
+      await expect(missing.json()).resolves.toEqual({ ok: false, error: "unauthenticated", reason: "no-cookie" });
 
       const wrong = await post(route.path, WRONG_KEY);
       expect(wrong.status).toBe(401);
-      await expect(wrong.json()).resolves.toEqual({ ok: false, error: "Valid sovereign key required" });
+      await expect(wrong.json()).resolves.toEqual({ ok: false, error: "unauthenticated", reason: "no-cookie" });
       expect(getThrottleMetrics().modules).toEqual([]);
     });
 
-    it(`accepts a valid key for ${route.path}`, async () => {
+    it(`accepts a valid owner session cookie for ${route.path}`, async () => {
       const response = await post(route.path, ADMIN_KEY);
       expect(response.status).toBe(200);
       await expect(response.json()).resolves.toEqual({ ok: true, message: route.message });

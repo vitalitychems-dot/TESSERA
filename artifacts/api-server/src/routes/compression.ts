@@ -1,4 +1,4 @@
-import { Router, type Request, type Response } from "express";
+import { Router } from "express";
 import {
   runCompressionPipeline,
   getCompressionMetrics,
@@ -7,7 +7,7 @@ import {
   portalJumpResolve,
   lookupCanonicalByDomain,
 } from "../lib/semantic-compression";
-import { validateMeshToken } from "../lib/mesh-auth";
+import { requireAdminSession } from "../lib/sovereign-admin";
 import { db } from "@workspace/db";
 import { knowledgeCanonicalTable } from "@workspace/db/schema";
 import { desc } from "drizzle-orm";
@@ -16,16 +16,7 @@ import { logger } from "../lib/logger";
 const router = Router();
 
 // Mutation routes require the same sovereign key as other admin routes.
-function requireMeshAuth(req: Request, res: Response, next: () => void): void {
-  const rawToken = req.headers["x-admin-token"];
-  const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
-  const keyHash = validateMeshToken(token);
-  if (!keyHash) {
-    res.status(401).json({ ok: false, error: "Valid sovereign key required" });
-    return;
-  }
-  next();
-}
+
 
 // Route-level rate limiting for mutation endpoints that trigger heavy DB/embedding work.
 // Returns 429 if the endpoint is called more frequently than ROUTE_RATE_LIMIT_MS.
@@ -49,7 +40,7 @@ router.get("/sovereign/compression/metrics", (_req, res) => {
   }
 });
 
-router.post("/sovereign/compression/run", requireMeshAuth, async (req, res) => {
+router.post("/sovereign/compression/run", requireAdminSession, async (req, res) => {
   if (!routeRateLimit("run")) {
     res.status(429).json({ error: "Rate limited — pipeline can only be triggered once per 30 seconds." }); return;
   }
@@ -68,7 +59,7 @@ router.post("/sovereign/compression/run", requireMeshAuth, async (req, res) => {
   }
 });
 
-router.get("/sovereign/compression/runs", requireMeshAuth, async (_req, res) => {
+router.get("/sovereign/compression/runs", requireAdminSession, async (_req, res) => {
   try {
     const runs = await getRecentCompressionRuns(20);
     res.json({ status: "ok", runs });
@@ -77,7 +68,7 @@ router.get("/sovereign/compression/runs", requireMeshAuth, async (_req, res) => 
   }
 });
 
-router.get("/sovereign/compression/canonical", requireMeshAuth, async (req, res) => {
+router.get("/sovereign/compression/canonical", requireAdminSession, async (req, res) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 50, 200);
     const rows = await db
@@ -91,7 +82,7 @@ router.get("/sovereign/compression/canonical", requireMeshAuth, async (req, res)
   }
 });
 
-router.get("/sovereign/compression/portal/:id", requireMeshAuth, (req, res) => {
+router.get("/sovereign/compression/portal/:id", requireAdminSession, (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid canonical ID" }); return; }
   const entry = portalJumpResolve(id);
@@ -99,13 +90,13 @@ router.get("/sovereign/compression/portal/:id", requireMeshAuth, (req, res) => {
   res.json({ status: "ok", entry });
 });
 
-router.get("/sovereign/compression/domain/:domain", requireMeshAuth, (req, res) => {
+router.get("/sovereign/compression/domain/:domain", requireAdminSession, (req, res) => {
   const domain = String(req.params.domain);
   const entries = lookupCanonicalByDomain(domain);
   res.json({ status: "ok", domain, count: entries.length, entries });
 });
 
-router.post("/sovereign/compression/portal/warm", requireMeshAuth, async (_req, res) => {
+router.post("/sovereign/compression/portal/warm", requireAdminSession, async (_req, res) => {
   if (!routeRateLimit("warm")) {
     res.status(429).json({ error: "Rate limited — warm can only be triggered once per 30 seconds." }); return;
   }

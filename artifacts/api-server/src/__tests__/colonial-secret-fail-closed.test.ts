@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { createCipheriv, createHash, hkdfSync } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -10,12 +11,14 @@ import {
   ColonialSecretNotConfiguredError,
   colonialSecretUnavailableBody,
   isColonialSecretConfigured,
+  requireColonialMasterSecret,
 } from "../lib/colonial-master-secret";
 import {
   decryptPairMessage,
   decryptWithRotatingCipher,
   encryptPairMessage,
   encryptWithRotatingCipher,
+  getOrCreateAgentState,
   getCipherSystemStatus,
   stopAutonomousRotation,
 } from "../lib/sovereign-cipher";
@@ -26,6 +29,7 @@ import {
   stopBandRotationScheduler,
 } from "../lib/lattice-frequency-bands";
 import { deriveKey } from "../lib/colonial-language-kernel";
+import { computeSharedRotationState, generateUniverseSeed } from "../lib/sovereign-ephemeris";
 import { sovereignBinaryPipeline, sovereignBinaryDecrypt } from "../lib/sovereign-kernel";
 import colonialLanguageRouter from "../routes/colonial-language";
 import sovereignLanguageRouter from "../routes/sovereign-language";
@@ -229,6 +233,106 @@ describe("colonial master secret fail closed", () => {
       expect(sovereignBinaryDecrypt(piped.data, piped.keyId).toString("utf8")).toBe(plaintext);
       expect(getCipherSystemStatus().configured).toBe(true);
     });
+  });
+
+  it("round-trips v2 cipher envelopes after the ephemeris and rotation epoch advance", async () => {
+    const start = new Date("2026-10-17T12:00:00.000Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(start);
+    try {
+      await withColonialSecret(AT_MINIMUM, () => {
+        const singleAgent = "cipher-v2-rotation-test-agent";
+        const single = encryptWithRotatingCipher("v2 rotating payload", singleAgent);
+        expect(single.formatVersion).toBe(2);
+
+        const sender = "cipher-v2-pair-test-sender";
+        const receiver = "cipher-v2-pair-test-receiver";
+        const pair = encryptPairMessage("v2 pair payload", sender, receiver);
+        expect(pair.formatVersion).toBe(2);
+
+        vi.setSystemTime(new Date(start.getTime() + 24 * 60 * 60 * 1000));
+        expect(decryptWithRotatingCipher(single.ciphertext, singleAgent)).toMatchObject({
+          plaintext: "v2 rotating payload",
+          rotationEpoch: single.rotationEpoch,
+          formatVersion: 2,
+        });
+        expect(decryptPairMessage(pair.ciphertext, sender, receiver)).toMatchObject({
+          plaintext: "v2 pair payload",
+          sharedEpoch: pair.sharedEpoch,
+          formatVersion: 2,
+        });
+
+        const tamperedSingleHeader = Buffer.from(single.ciphertext, "base64");
+        tamperedSingleHeader[4] ^= 1;
+        expect(() => decryptWithRotatingCipher(tamperedSingleHeader.toString("base64"), singleAgent)).toThrow();
+        const tamperedPairHeader = Buffer.from(pair.ciphertext, "base64");
+        tamperedPairHeader[4] ^= 1;
+        expect(() => decryptPairMessage(tamperedPairHeader.toString("base64"), sender, receiver)).toThrow();
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("continues to decode legacy v1 single and pair ciphertexts when their epoch is available", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-17T12:00:00.000Z"));
+    try {
+      await withColonialSecret(AT_MINIMUM, () => {
+        const singleAgent = "cipher-v1-legacy-test-agent";
+        const state = getOrCreateAgentState(singleAgent);
+        const seed = generateUniverseSeed();
+        const singleSalt = createHash("sha256")
+          .update(`${singleAgent}:${state.rotationEpoch}:${state.cipherVariant}:${seed.seedHash.slice(0, 16)}`)
+          .digest()
+          .subarray(0, 16);
+        const singleInfo = Buffer.from(`sovereign-cipher:${singleAgent}:${state.rotationEpoch}`, "utf8");
+        const singleKey = Buffer.from(hkdfSync("sha256", requireColonialMasterSecret(), singleSalt, singleInfo, 32));
+        const singleCipher = createCipheriv("aes-256-gcm", singleKey, Buffer.alloc(12, 0x24));
+        const singleEncrypted = Buffer.concat([
+          singleCipher.update(Buffer.from("legacy single payload", "utf8")),
+          singleCipher.final(),
+        ]);
+        const singleLegacy = Buffer.concat([
+          Buffer.from([state.dialectIndex, state.cipherVariant]),
+          Buffer.alloc(12, 0x24),
+          singleCipher.getAuthTag(),
+          singleEncrypted,
+        ]).toString("base64");
+        expect(decryptWithRotatingCipher(singleLegacy, singleAgent)).toMatchObject({
+          plaintext: "legacy single payload",
+          formatVersion: 1,
+        });
+
+        const sender = "cipher-v1-legacy-sender";
+        const receiver = "cipher-v1-legacy-receiver";
+        const shared = computeSharedRotationState(sender, receiver);
+        const pairKey = [sender, receiver].sort().join(":");
+        const pairSalt = createHash("sha256")
+          .update(`pair:${pairKey}:${shared.sharedEpoch}:${shared.sharedCipherVariant}`)
+          .digest()
+          .subarray(0, 16);
+        const pairInfo = Buffer.from(`sovereign-pair-cipher:${pairKey}:${shared.sharedEpoch}`, "utf8");
+        const pairCipherKey = Buffer.from(hkdfSync("sha256", requireColonialMasterSecret(), pairSalt, pairInfo, 32));
+        const pairCipher = createCipheriv("aes-256-gcm", pairCipherKey, Buffer.alloc(12, 0x25));
+        const pairEncrypted = Buffer.concat([
+          pairCipher.update(Buffer.from("legacy pair payload", "utf8")),
+          pairCipher.final(),
+        ]);
+        const pairLegacy = Buffer.concat([
+          Buffer.from([shared.sharedDialect, shared.sharedCipherVariant]),
+          Buffer.alloc(12, 0x25),
+          pairCipher.getAuthTag(),
+          pairEncrypted,
+        ]).toString("base64");
+        expect(decryptPairMessage(pairLegacy, sender, receiver)).toMatchObject({
+          plaintext: "legacy pair payload",
+          formatVersion: 1,
+        });
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("derives different band keys for different synthetic secrets", async () => {

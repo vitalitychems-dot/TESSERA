@@ -13,6 +13,7 @@ import * as nodeCrypto from "node:crypto";
 import { getForumEngineMetrics, runForumCycle, FORUM_AGENTS } from "../lib/autonomous-forum-engine";
 import { scoreApplicantAlignment } from "../lib/applicant-alignment";
 import { authorAndSignDeclaration } from "../lib/lattice-declarations";
+import { getOwnerSessionKeyHash } from "../lib/sovereign-admin";
 
 const router: IRouter = Router();
 
@@ -30,11 +31,9 @@ const COUNCIL_MEMBERS_FOR_SUMMON = [
 ];
 
 function requireForumAuth(req: Request, res: Response): string | null {
-  const rawToken = req.headers["x-admin-token"];
-  const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
-  const keyHash = validateMeshToken(token);
+  const keyHash = getOwnerSessionKeyHash(req);
   if (!keyHash) {
-    res.status(401).json({ ok: false, error: "Valid sovereign key required to post in the forum" });
+    res.status(401).json({ ok: false, error: "Authenticated admin session required to post as Father" });
     return null;
   }
   return keyHash;

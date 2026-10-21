@@ -18,6 +18,7 @@ import { recallIngestedKnowledge } from "../lib/ingested-recall";
 import { validateResponse } from "../lib/response-validation-engine";
 import { runCritiqueLoop } from "../lib/self-critique";
 import { generateConfiguredChatReply } from "../lib/chat-generation";
+import { containsCredentialMaterial, redactCredentialMaterial } from "../lib/credential-guard";
 import { acceptedChatLlmBaseUrl, isChatRedirectStatus } from "../lib/tessera-llm-http";
 import { classifyQuery } from "../lib/adaptive-router";
 import { hybridRetrieve, formatCitations } from "../lib/hybrid-retrieval";
@@ -520,8 +521,11 @@ router.post("/messages", requireAdminSession, async (req, res) => {
     const content = req.body?.content as string;
     const nlpGoals: string[] = Array.isArray(req.body?.nlpGoals) ? req.body.nlpGoals : [];
 
-    if (!conversationId || !content) {
+    if (!conversationId || typeof content !== "string" || !content) {
       return res.status(400).json({ error: "conversationId and content required" });
+    }
+    if (containsCredentialMaterial(content)) {
+      return res.status(400).json({ error: "Message blocked by credential safety filter" });
     }
 
     await db.insert(messagesTable).values({
@@ -592,8 +596,12 @@ router.post("/messages", requireAdminSession, async (req, res) => {
       res.flushHeaders?.();
       res.write(": stream-open\n\n");
       res.write(`data: ${JSON.stringify({ status: "generating", routing: { tier: "configured-model", reason: "checking provider availability" } })}\n\n`);
+      const safeHistory = history.reverse().map((message) => ({
+        role: message.role,
+        content: redactCredentialMaterial(message.content),
+      }));
       const generated = await generateConfiguredChatReply({
-        history: history.reverse().map((message) => ({ role: message.role, content: message.content })),
+        history: safeHistory,
         userMessage: content,
       });
       res.write(`data: ${JSON.stringify({
