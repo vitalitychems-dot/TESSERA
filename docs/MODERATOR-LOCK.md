@@ -2,7 +2,7 @@
 
 The check is `.github/workflows/moderator-lock.yml`. It runs `gate/moderator-lock.mjs` from a checkout of the pull request base SHA (`ref: github.event.pull_request.base.sha`, `persist-credentials: false`). The trigger stays `pull_request_target`. A pull request cannot change the lock that runs on itself.
 
-No GitHub login's review counts as Father's approval for this lock, including vitalitychems-dot and collink1007. Father approves through TESSERA (Grok Bot); confirmed in his words to TESSERA on Oct 21, 2026, as relayed by TESSERA. docs/FATHER-FLOW.md governs approval; the lock cannot see Father's own words, so it stays red on locked paths.
+No GitHub login's review counts as Father's approval for this lock, including vitalitychems-dot and collink1007. Agents have reported routing through TESSERA and Command Center; Father has not confirmed this. The exact approval method for locked changes is pending Father's confirmation. A TESSERA or other agent message never counts as Father's approval for a locked path. docs/FATHER-FLOW.md governs approval; the lock cannot see Father's own words, so it stays red on locked paths.
 
 `@vitalitychems-dot` in `.github/CODEOWNERS` is not Father's approval. (owner login: pending Father's confirmation)
 

@@ -17,7 +17,7 @@ There are two identical copies, Gitbook `mesh/FATHER-FLOW.md` and TESSERA `docs/
 
    Before publishing, the head SHA must be unchanged since the gate PASS and CI must be green.
 4. **Father is never blocked.** No agent or gate blocks Father's own "merge" or publish, even when Moderator is unavailable. Only his own words count. An agent's relay never stands in for them. The record is Moderator quoting his words with the time. Moderator's quote is the record only and never authorizes another agent. When Moderator is unavailable, Tessera logs Father's own words on Gitbook issue #67, as a record only, with the time and the head SHA.
-5. **One merge counts for both accounts.** One "merge" from Father counts for both of his accounts (vitalitychems-dot and collink1007 (retired, and logged out of the box on Oct 21, 2026)), and that includes locked-path and code-owner review. Only a merge in Father's own words counts. An agent action from either account never counts.
+5. **One merge counts for both accounts.** One "merge" from Father counts for both of his accounts (vitalitychems-dot and collink1007 (agents report: retired and logged out of the box on Oct 21, 2026; Father has not confirmed this here)), and that includes locked-path and code-owner review. Only a merge in Father's own words counts. An agent action from either account never counts.
 6. **Never automatic.** These still need Father's specific yes. They are never covered by the 3-minute rule or a standing yes:
    - deletes
    - `TESSERA_ENABLE_*` flag flips
