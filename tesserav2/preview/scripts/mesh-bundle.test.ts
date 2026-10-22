@@ -1,0 +1,21 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+const script = new URL("./mesh-bundle.mjs", import.meta.url).pathname;
+const sha = (p: string) => createHash("sha256").update(readFileSync(p)).digest("hex");
+test("bundle -> verify -> open keeps mesh/index.json byte-identical", () => {
+  const t = mkdtempSync(join(tmpdir(), "bundle-"));
+  const src = join(t, "src"); mkdirSync(join(src, "mesh"), { recursive: true });
+  writeFileSync(join(src, "mesh/index.json"), JSON.stringify({ net: "gitmesh", pages: 3 }));
+  const g = (a: string[]) => execFileSync("git", a, { cwd: src, env: { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t" } });
+  g(["init", "-q"]); g(["add", "."]); g(["commit", "-qm", "x"]);
+  const bundle = join(t, "mesh.bundle");
+  execFileSync("node", [script, "create", src, bundle]);
+  execFileSync("node", [script, "verify", bundle]);
+  execFileSync("node", [script, "open", bundle, join(t, "dst")]);
+  assert.equal(sha(join(t, "dst/mesh/index.json")), sha(join(src, "mesh/index.json")));
+});
