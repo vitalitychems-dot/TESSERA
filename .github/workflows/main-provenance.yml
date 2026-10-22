@@ -4,15 +4,18 @@ name: Main provenance
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: "0 6 * * *"
 
 permissions:
   contents: read
   pull-requests: read
 
-# Push to main does not cancel an in-progress provenance report.
+# A push to main and the daily schedule share this group and both finish.
+# Schedule uses the default branch ref, and event_name covers a schedule that is not on that ref.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' && github.ref != 'refs/heads/main' }}
 
 jobs:
   provenance:
