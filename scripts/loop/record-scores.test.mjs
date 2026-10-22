@@ -88,6 +88,29 @@ function seedDated(work, count, prefix) {
   writeFileSync(join(work, "findings.json"), "[]\n");
 }
 
+test("publish, compare, and issue writes run only on main", () => {
+  const yml = readFileSync(new URL("../../.github/workflows/self-improve.yml", import.meta.url), "utf8");
+  const start = yml.indexOf("\n  publish:\n");
+  assert.notEqual(start, -1);
+  const rest = yml.slice(start + 1);
+  const next = rest.slice(1).search(/\n  [a-z]/);
+  const job = next === -1 ? rest : rest.slice(0, next + 1);
+  assert.match(job, /^    if: github\.ref == 'refs\/heads\/main'$/m);
+  const jobIf = job.indexOf("    if: github.ref == 'refs/heads/main'");
+  const steps = [
+    "      - name: Compare with last recorded scores",
+    "      - name: Open / refresh / close needs-agent issues",
+    "      - name: Record scores + heartbeat on gate-scores",
+  ];
+  let previous = jobIf;
+  for (const name of steps) {
+    const at = job.indexOf(name);
+    assert.ok(at > previous, name);
+    assert.match(job.slice(at, at + 240), /if: github\.ref == 'refs\/heads\/main'/);
+    previous = at;
+  }
+});
+
 test("the recorder never force-pushes and does not swallow a push error", () => {
   assert.equal(scriptText.includes("--force"), false);
   assert.equal(scriptText.includes("--cached"), false);
