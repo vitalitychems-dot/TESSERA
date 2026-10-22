@@ -1,0 +1,7 @@
+{"type":"fixture","label":"SAMPLE memory index. Not the live index. The water facet is invented for this fixture. The other entity and relation rows are copied from docs/v2/v2-memory.jsonl."}
+{"type":"entity","name":"TESSERA_v2","entityType":"project","observations":["Goal: one all-in-one open-source Tessera combining useful capabilities from inventory repos","Base repo: vitalitychems-dot/TESSERA","License aim: MIT unless reused piece requires otherwise"]}
+{"type":"entity","name":"cap_api_adapters","entityType":"capability","observations":["category:adapters","Taught site operations via api-anything + official APIs"]}
+{"type":"entity","name":"cap_chamber_board_ui","entityType":"capability","observations":["category:ui","Olive Chamber/Board into TESSERA"]}
+{"type":"entity","name":"water","entityType":"facet","observations":["category:ui","Sample facet that recalls cap_chamber_board_ui"]}
+{"type":"relation","from":"TESSERA_v2","to":"cap_chamber_board_ui","relationType":"includes_capability"}
+{"type":"relation","from":"water","to":"cap_chamber_board_ui","relationType":"sample_mark"}
