@@ -1,6 +1,8 @@
 # TESSERA secret scan. Extends the gitleaks default rules.
 # Allowlists are exact captured secrets that are false positives.
 # There is no path blanket and no global ignore.
+# The credential-guard fixtures and the opened/ archive findings are
+# commit fingerprints in .gitleaksignore, not a path allowlist.
 
 title = "TESSERA"
 
