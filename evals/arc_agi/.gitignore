@@ -1,0 +1,4 @@
+.data/
+results/*/tasks.json
+results/*/confidence.jsonl
+__pycache__/
