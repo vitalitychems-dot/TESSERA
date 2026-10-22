@@ -4,18 +4,22 @@ Headline: **20 / 400 tasks** solved on the full public evaluation split. 95% CI 
 
 Predictions correct on that same run: 23 / 419. Wall time 75.6 s (cap not hit). Run directory: `results/20261021T220320Z`.
 
-Einstein's final on `#526` at `014f669f` is OK-WITH-FIXES. An independent rerun of the preregistered command reproduced the scores: 23/419 predictions and 20/400 tasks.
+Precision when attempted: 23/26 = 0.885 (summary.json 0.8846). Wilson 95% CIs, Einstein, TESTED: 23/26 → [0.710, 0.960] and 23/419 → [0.037, 0.081].
+
+The per-task limit added after that run is wall-clock time around `solve()`. A later summary is only valid when it reports `tasks_timed_out`. The committed baseline summary does not have that field. Load sensitivity, REPORTED by GitAI: at a load average of about 59 the same command scored 22/419 predictions and 19/400 tasks, versus 23/419 and 20/400 at low load. REPORTED by GitAI under that box load: 24 tasks killed at 8.0-8.7 s.
+
+Einstein's final on `#526` at `014f669f` is OK-WITH-FIXES. An independent rerun of the preregistered command reproduced the scores: 23/419 predictions and 20/400 tasks. That audit read the summary key `confidence_calibration`.
 
 ## Erratum
 
-The pull request text said the solver uses 47 transforms. The code that ran (`solvers/dsl_search.py`, commit `953b4a45`) has **44** entries in `PRIMITIVES`. The preregistration text was corrected after the run. The code and the scoring rules did not change.
+The pull request text said the solver uses 47 transforms. The code that ran (`solvers/dsl_search.py`, commit `953b4a45`) has **44** entries in `PRIMITIVES`. The preregistration text was corrected after the run. The scoring rules did not change. After that audit the summary key was renamed `confidence_calibration` to `confidence_counts`; the bin counts were not changed.
 
 ## Per-task logs
 
 `results/20261021T220320Z/tasks.json` and `results/20261021T220320Z/confidence.jsonl` stay gitignored. Those logs include wall-clock fields, so this file records the stable canonical sha256 values instead. Both were recomputed here from the pinned evaluation files and from a full rerun of `solvers/dsl_search.py` (`--seed 20261021 --task-time-limit 8 --total-time-limit 600 --workers 6`). Each full digest matches the audit prefix and suffix.
 
 - Dataset sha256, over the 400 evaluation files in sorted filename order, updating with `filename + NUL + file bytes`: `4d9a15441fd20199f4fb419641ead13aaef357695abcc7e0ea243e3548a16dfb`
-- Prediction sha256, over the canonical per-task record (correctness, attempt count, confidence, programs, `n_consistent`, depth, timeout flag; `seconds` removed), serialized with `json.dumps(..., sort_keys=True, separators=(",", ":"))`: `053614f979f55874abf7025bf7c459c869395571190256579c9eb186f2a0caa9`
+- Prediction sha256, over the canonical per-task record (correctness, attempt count, confidence, programs, `n_consistent`, depth, timeout flag; `seconds` removed), serialized with `json.dumps(..., sort_keys=True, separators=(",", ":"))` by [`canonical.py`](canonical.py) (`canonical_predictions` / `prediction_sha256`; recompute with `python3 evals/arc_agi/canonical.py <tasks.json>`): `053614f979f55874abf7025bf7c459c869395571190256579c9eb186f2a0caa9`
 
 ## Self-reported confidence
 

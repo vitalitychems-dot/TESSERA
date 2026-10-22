@@ -7,7 +7,9 @@ run type; report it separately and do not compare it as the same baseline.
 - Split: public ARC-AGI-1 **evaluation** set, `fchollet/ARC-AGI` `data/evaluation`, pinned
   commit `399030444e0ab0cc8b4e199870fb20b863846f34`.
 - Counts (checked by the runner; it exits on mismatch): **400 tasks, 419 test outputs**.
-- Integrity: the runner logs a sha256 over the sorted (filename, bytes) of all 400 files.
+- Integrity: the runner logs a sha256 over the sorted (filename, bytes) of all 400 files
+  and exits non-zero if that digest is not the pinned value (`PINNED_DATASET_SHA256` in `run.py`,
+  the same digest recorded in `RESULTS.md`). post-run amendment (#540): applies to runs after 20261021T220320Z. That run used `run.py` at `953b4a45`, which did not exit on a digest mismatch.
 - No training-split tasks, no hidden/private sets, no test outputs visible to the solver.
 
 ## Scoring
@@ -37,7 +39,8 @@ run type; report it separately and do not compare it as the same baseline.
 
 ## Seed and limits
 - Seed: **20261021** (orders tasks; also selects `--subset` if one is used).
-- Per-task time limit: **8 s** (solver deadline). Total wall cap: **600 s**. Workers: **6**.
+- Per-task time limit: **8 s** of wall-clock time around `solve()` (enforced by the harness). A task whose `solve()` exceeds that limit is a failure recorded with a timeout reason, including a solver that returns a grid after the limit. The summary field `tasks_timed_out` counts those tasks. A summary that does not report `tasks_timed_out` is not valid under this rule. post-run amendment (#540): applies to runs after 20261021T220320Z. That run used `run.py` at `953b4a45`, which did not kill an overrun. Total wall cap: **600 s**. Workers: **6**.
+- Runs after the #540 post-run amendment are not the same baseline as `20261021T220320Z` and must be compared as a new run.
 - First run is the full 400-task split. If the wall cap is hit, unstarted tasks score 0
   and the summary says so.
 
