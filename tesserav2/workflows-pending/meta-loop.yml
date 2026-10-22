@@ -1,0 +1,41 @@
+name: meta-loop
+# Measures the loop itself weekly and proposes its own tuning as an issue (the recursive part).
+on:
+  schedule:
+    - cron: "41 10 * * 1"
+  workflow_dispatch:
+permissions: {}
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/loop
+      - name: Measure needs-agent issues (opened vs fixed, time to fix, tokens per fix)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue list -R "$GITHUB_REPOSITORY" --label needs-agent --state all --limit 500 --json number,createdAt,closedAt,body,comments > issues.json
+          node scripts/loop/meta.mjs issues.json 7 > meta.json
+          jq -r '"## Loop metrics (7d)\n" + (.metrics|to_entries|map("- \(.key): \(.value)")|join("\n")) + "\n\n## Proposed tuning\n" + (.proposals|map("- " + .)|join("\n"))' meta.json > meta.md
+          cat meta.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Open or refresh the loop-tuning proposal issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create loop-tuning --color 0E8A16 2>/dev/null || true
+          n=$(gh issue list -R "$GITHUB_REPOSITORY" --label loop-tuning --state open --json number -q '.[0].number')
+          if [ -n "$n" ]; then gh issue comment "$n" -R "$GITHUB_REPOSITORY" --body-file meta.md
+          else gh issue create -R "$GITHUB_REPOSITORY" --title "[meta-loop] tune the self-improve loop" --label loop-tuning --body-file meta.md; fi
+      - name: Mirror to Gitbook #67 (only if Father adds a fine-grained GITBOOK_LOG_TOKEN with issues:write on Gitbook)
+        env:
+          GH_TOKEN: ${{ secrets.GITBOOK_LOG_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then echo "GITBOOK_LOG_TOKEN not set; skipping #67 mirror"; exit 0; fi
+          gh issue comment 67 -R vitalitychems-dot/Gitbook --body-file meta.md

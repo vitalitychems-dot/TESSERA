@@ -1,0 +1,32 @@
+name: Main provenance
+
+# Report only. This job does not push, revert, or rewrite history.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * *"
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The check looks at the latest 30 commits. 50 leaves a margin.
+          fetch-depth: 50
+
+      - name: Report commit provenance
+        env:
+          # Off until a later change sets this to 1. Findings stay in the summary.
+          PROVENANCE_ENFORCE: "0"
+          # Automatic workflow token only. Do not switch this to a repository secret.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/main-provenance.mjs
