@@ -2,13 +2,11 @@ name: self-improve
 # 0-token loop: score main, record scores on branch gate-scores, open/refresh one needs-agent issue per finding.
 # Writes gate-scores:scores/heartbeat.json for the dead man's switch (deadman.yml reads it; not duplicated here).
 on:
-  schedule:
-    - cron: "17 9 * * *"
   workflow_dispatch:
 permissions: {}
 concurrency:
-  group: self-improve
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   score:
     runs-on: ubuntu-latest

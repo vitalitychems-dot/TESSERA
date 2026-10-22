@@ -11,10 +11,16 @@ permissions:
   contents: read
   pull-requests: read
 
+# A push to main and the daily schedule share this group and both finish.
+# Schedule uses the default branch ref, and event_name covers a schedule that is not on that ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' && github.ref != 'refs/heads/main' }}
+
 jobs:
   provenance:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
