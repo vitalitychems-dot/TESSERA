@@ -13,7 +13,7 @@ Static files are read when the process starts, from fixed paths inside `public/`
 | Tab | Real source |
 | --- | --- |
 | Eye | Tail of `docs/v2/v2-memory.jsonl`, the in-process agent bus, and retrieval-memory rows written by Chat |
-| Brain | `loadGraph` / `replayAt` / Hebbian synapses on that same memory log, with a time slider |
+| Brain | `loadGraph` / `replayAt` / Hebbian synapses on that same memory log, with a time slider. `BRAIN_TAB=1` replaces that view with a static three.js force graph of `public/brain-snapshot.json`. Unset or `BRAIN_TAB=0` leaves the slider. The shipped snapshot is the sample fixture. `node scripts/brain/export-snapshot.mjs` rewrites the snapshot from `docs/v2/v2-memory.jsonl` |
 | Chat | `askAll`, then `speak`, then `silentPen` from `preview/src/lib/tessera` |
 | Bus | `busStats` and `pullRecent` in `artifacts/api-server/src/lib/agi/agent-bus.ts` |
 | Score | `artifacts/v2/src/brain/router-eval.json` report, `eval-os-metrics` live scores, and `chatbot-cases.ts` prompts |

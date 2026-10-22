@@ -6,7 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { HANDLERS } from "../public/actions.mjs";
-import { normalizePublicPath, publicFilePath, startServer } from "../server.mjs";
+import { applyBrainTab, normalizePublicPath, publicFilePath, startServer } from "../server.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const html = readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
@@ -76,6 +76,27 @@ test("every button and slider maps to a handler", async () => {
   assert.ok(calls.some((call) => call.url === "/api/bus"));
   assert.ok(calls.some((call) => call.url === "/api/score"));
   assert.ok(calls.some((call) => call.url === "/api/chat" && call.options.method === "POST"));
+  const before = calls.length;
+  state.brainSnapshot = true;
+  await HANDLERS["tab-brain"](state, io);
+  assert.equal(calls.length, before);
+  assert.equal(state.tab, "brain");
+  state.brainSnapshot = false;
+  await HANDLERS["tab-brain"](state, io);
+  assert.ok(calls.length > before);
+});
+
+test("brain snapshot markup is injected only when enabled", () => {
+  const off = applyBrainTab(html, { nodes: [{ id: "<script>" }] }, false);
+  assert.equal(off, html);
+  assert.equal(off.includes("data-brain-snapshot"), false);
+  const on = applyBrainTab(html, { nodes: [{ id: "<script>" }], counts: { nodes: 1, edges: 0, links: 0, recalls: 0 } }, true);
+  assert.match(on, /data-brain-snapshot="1"/);
+  assert.match(on, /id="brain-snapshot-data"/);
+  assert.match(on, /Visualization of TESSERA's memory index \(snapshot\), not a model of her mind\./);
+  const embedded = on.match(/id="brain-snapshot-data">([^<]*)<\/script>/);
+  assert.ok(embedded);
+  assert.match(embedded[1], /\\u003cscript/);
 });
 
 test("each tab endpoint returns data that exists in the repo", async () => {
