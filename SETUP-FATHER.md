@@ -1,19 +1,20 @@
 # SETUP-FATHER: steps only Father can do
 
-> **Updated 2026-10-19:** [Father's approval flow](docs/FATHER-FLOW.md) is the source of truth for reporting, approvals and merges. Where this page disagrees, that page wins. Under that flow, one 'merge' in Father's own words counts for both of his accounts. That waives **only** the separate collink1007 (code-owner) review requirement. Every other step below stays in force: keeping the owner token off the box, the secret and variable setup, the per-gate Apps, branch protection and the other hardening.
+> **Updated 2026-10-21 Central time:** [Father's approval flow](docs/FATHER-FLOW.md) is the source of truth for reporting, approvals and merges. Where this page disagrees, that page wins. [Moderator lock](docs/MODERATOR-LOCK.md) describes the path lock. No GitHub login's review counts as Father's approval for this lock, including vitalitychems-dot and collink1007. Agents have reported routing through TESSERA and Command Center; Father has not confirmed this. docs/FATHER-FLOW.md governs approval; the lock cannot see Father's own words, so it stays red on locked paths. The exact approval method for locked changes is pending Father's confirmation. (owner login: pending Father's confirmation)
 
-Why: every agent pushes and comments as `vitalitychems-dot`, so CODEOWNERS reviews, `FATHER APPROVED` comments and PASS comments can all be forged (Moderator and Security, Gitbook #71). `moderator-lock` therefore **fails closed** until the steps below are done. Agents must not do any of them.
+Why: every agent pushes and comments as `vitalitychems-dot`, so CODEOWNERS reviews, `FATHER APPROVED` comments and PASS comments can all be forged (Moderator and Security, Gitbook #71). The lock stays **red** on a locked path either way. `@vitalitychems-dot` in CODEOWNERS is not Father's approval.
 
-## 1. Separate Father from the agents
-1. Create a **second, Father-only GitHub account** (for example `collin-keane`). It becomes the only admin and CODEOWNER. Enable 2FA on it.
-2. Repo **Settings → Secrets and variables → Actions → Variables** on TESSERA and Gitbook:
-   - `FATHERLOGIN` = that account's login (preferred; no underscore — phone-friendly). Falls back to `FATHER_LOGIN` if unset. It must be different from `vitalitychems-dot`; otherwise the lock stays closed. Comparison is case-insensitive (both sides lowercased).
-   - `AGENT_LOGINS` = `vitalitychems-dot` (comma-separated if there are more).
-3. Change `@vitalitychems-dot` to the Father-only login in `.github/CODEOWNERS` (both repos), from the Father account.
-4. Downgrade `vitalitychems-dot` to **Write** (not Admin) on both repos, or move the agents to the Apps in step 2 and revoke the PAT on the box.
-5. **Keep the owner token off the box.** Don't run `gh auth login` as the Father account on the shared box. Revoke any owner PAT already stored there (Settings → Developer settings → Tokens).
+Repo variables `FATHERLOGIN` and `FATHER_LOGIN` are left in place and are **not read**. `AGENT_LOGINS` is not read. Do not set them for this lock. There is no step below that sets an unread variable.
 
-## 2. Create 3 GitHub Apps (one identity per gate)
+Every step below is **optional hardening**. Doing it or skipping it does not make a GitHub review unlock a locked path, and does not turn the lock green on a locked path. The check stays advisory until a ruleset requires it. This page does not change branch protection or rulesets. Agents must not apply these steps.
+
+## 1. Separate the shared account from an owner token (optional hardening)
+1. (owner login: pending Father's confirmation) Enable 2FA on any account that can administer the repo. Do not treat a GitHub login as Father's approval.
+2. `@vitalitychems-dot` in `.github/CODEOWNERS` is not Father's approval. Do not point the lock at a GitHub login.
+3. Downgrade `vitalitychems-dot` to **Write** (not Admin) on both repos, or move the agents to the Apps below and revoke the PAT on the box. The lock stays red on locked paths either way.
+4. **Keep the owner token off the box.** Don't run `gh auth login` as an owner account on the shared box. Revoke any owner PAT already stored there (Settings → Developer settings → Tokens).
+
+## 2. Create 3 GitHub Apps (one identity per gate) — optional hardening
 For each of **Tessera Moderator**, **Tessera Security** and **Tessera Build** (Settings → Developer settings → GitHub Apps → New):
 - Homepage: the repo URL. Webhook: off.
 - Permissions: **Checks: Read & write**, Contents: Read, Pull requests: Read, Metadata: Read. Nothing else.
@@ -22,7 +23,7 @@ For each of **Tessera Moderator**, **Tessera Security** and **Tessera Build** (S
 - Generate a private key and give each key **only to that gate's runner/agent**, never to the shared box. The gate posts its PASS/FAIL as a **check run** on the head SHA. PASS comments are ignored.
 
 ## 3. Branch protection on `main` (both repos), Settings → Rules → Rulesets
-Draft. Father applies it; agents do not.
+Optional hardening. Draft only. Father applies it; agents do not. On 2026-10-21 Central time, `gh api repos/vitalitychems-dot/TESSERA/rulesets` returned HTTP 200 and `[]`, so no ruleset requires `moderator-lock`. The check is advisory. REPORTED by GitAI: classic branch protection exists on `main`. The required checks are `validate`, `author-check`, `gitleaks`, and `diff-scan`. `moderator-lock` is not required. 0 approvals are needed, and `enforce_admins` is on. A non-author review plus a TESSERA merge is a process rule. This page does not create or edit a ruleset.
 - Target: default branch. Enforcement: Active. **Bypass list: empty** (no admin bypass).
 - Require a pull request before merging:
   - required approvals: 1;
