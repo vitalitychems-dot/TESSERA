@@ -68,15 +68,4 @@ jobs:
           gh label create needs-agent --color B60205 --description "Self-improve finding; agents spend tokens only here" 2>/dev/null || true
           node scripts/loop/findings.mjs findings.json scores.json
       - name: Record scores + heartbeat on gate-scores
-        run: |
-          set -euo pipefail
-          git config user.name vitalitychems-dot
-          git config user.email 332565808+vitalitychems-dot@users.noreply.github.com
-          mkdir -p /tmp/s && cp scores.json findings.json /tmp/s/
-          git switch --orphan gate-scores-new
-          git fetch --depth 1 origin gate-scores 2>/dev/null && git checkout origin/gate-scores -- scores 2>/dev/null || mkdir -p scores
-          cp /tmp/s/scores.json scores/latest.json
-          cp /tmp/s/scores.json "scores/$(date -u +%Y%m%dT%H%M)-${GITHUB_SHA::8}.json"
-          jq -n --arg sha "$GITHUB_SHA" --arg at "$(date -u +%FT%TZ)" --slurpfile f /tmp/s/findings.json '{sha:$sha, at:$at, findings:($f[0]|length)}' > scores/heartbeat.json
-          ls -1 scores/2*.json | head -n -90 | xargs -r git rm -q --cached --ignore-unmatch 2>/dev/null || true
-          git add --sparse scores && git commit -qm "scores: ${GITHUB_SHA::8}" && git push -q origin HEAD:gate-scores
+        run: bash scripts/loop/record-scores.sh
