@@ -7,6 +7,7 @@ Scores a solver plugin on fchollet/ARC-AGI data/evaluation (pinned commit):
 See PREREGISTRATION.md for the fixed rules. Writes evals/arc_agi/results/<UTC timestamp>/.
 """
 import argparse, hashlib, importlib.util, io, json, multiprocessing as mp, os, platform, random
+import multiprocessing.connection as mp_connection
 import signal, subprocess, sys, time, urllib.request, zipfile
 from datetime import datetime, timezone
 
@@ -18,6 +19,9 @@ MAX_ATTEMPTS = 2
 # Full digest already recorded in RESULTS.md and the baseline summary.json.
 PINNED_DATASET_SHA256 = "4d9a15441fd20199f4fb419641ead13aaef357695abcc7e0ea243e3548a16dfb"
 NON_DICT_RESULT = "solver returned a non-dict result"
+WORKER_CRASH = "crashed: worker exited"
+# ARC-AGI grids are rectangular, 1..30 on each side, cells int 0..9 (not bool).
+ARC_MIN_DIM, ARC_MAX_DIM = 1, 30
 # Whole repository. A pathspec of "." only saw evals/arc_agi.
 GIT_STATUS_ARGV = ["git", "status", "--porcelain"]
 
@@ -106,13 +110,22 @@ def coerce_confidence(value):
     return number
 
 
+def clamp_confidence(number):
+    """Bucket input only. Stored confidence is left as the solver reported it."""
+    if number < 0.0:
+        return 0.0
+    if number > 1.0:
+        return 1.0
+    return number
+
+
 def confidence_counts(done):
     buckets = {}
     for record in done.values():
         for row in record["tests"]:
             if not row["n_attempts"]:
                 continue
-            conf = coerce_confidence(row.get("confidence", 0.0))
+            conf = clamp_confidence(coerce_confidence(row.get("confidence", 0.0)))
             band = min(int(conf * 4), 3)
             lo = band / 4
             key = f"{lo:.2f}-{lo + 0.25:.2f}"
@@ -134,23 +147,107 @@ def repo_is_dirty(run=None, cwd=None):
     return bool((getattr(proc, "stdout", "") or "").strip())
 
 
+def _is_arc_grid(grid):
+    """Plain rectangular ARC grid: 1..30 by 1..30, every cell an int 0..9."""
+    if type(grid) is not list or not (ARC_MIN_DIM <= len(grid) <= ARC_MAX_DIM):
+        return False
+    width = None
+    for row in grid:
+        if type(row) is not list or not (ARC_MIN_DIM <= len(row) <= ARC_MAX_DIM):
+            return False
+        if width is None:
+            width = len(row)
+        elif len(row) != width:
+            return False
+        for cell in row:
+            # bool is a subclass of int and must not count (True == 1).
+            if type(cell) is not int or not (0 <= cell <= 9):
+                return False
+    return True
+
+
+def _decode_attempt(attempt):
+    """JSON round-trip, then the ARC grid check. Anything else is not comparable."""
+    try:
+        decoded = json.loads(json.dumps(attempt))
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if not _is_arc_grid(decoded):
+        return None
+    return decoded
+
+
+def _with_valid_attempts(res):
+    """Replace non-grids with None, in order, and record invalid_attempts.
+
+    Placeholders keep the attempt slot so a later valid guess cannot move into
+    a slot the invalid one already used. A second pass sees only grids and
+    None and does not count those placeholders again.
+    """
+    if not isinstance(res, list):
+        return res
+    cleaned = []
+    for item in res:
+        if not isinstance(item, dict):
+            cleaned.append(item)
+            continue
+        item = dict(item)
+        raw = item.get("attempts") or []
+        if not isinstance(raw, list):
+            raw = [raw]
+        meta = dict(item.get("meta") or {})
+        already = int(meta.get("invalid_attempts") or 0)
+        if already and all(attempt is None or _is_arc_grid(attempt) for attempt in raw):
+            cleaned.append(item)
+            continue
+        stored = []
+        invalid = 0
+        for attempt in raw:
+            grid = _decode_attempt(attempt)
+            if grid is None:
+                invalid += 1
+                stored.append(None)
+            else:
+                stored.append(grid)
+        item["attempts"] = stored
+        if invalid:
+            meta["invalid_attempts"] = already + invalid
+            item["meta"] = meta
+        cleaned.append(item)
+    return cleaned
+
+
+def _current_sigmask():
+    if not hasattr(signal, "pthread_sigmask"):
+        return None
+    return signal.pthread_sigmask(signal.SIG_BLOCK, [])
+
+
+def _restore_sigmask(mask):
+    if mask is None or not hasattr(signal, "pthread_sigmask"):
+        return
+    signal.pthread_sigmask(signal.SIG_SETMASK, mask)
+
+
 def _run_task(args):
     tid, task, limit, cfg = args
     train = [(p["input"], p["output"]) for p in task["train"]]
     tests = [p["input"] for p in task["test"]]
     n = len(tests)
     t0 = time.monotonic()
-    if limit is not None and limit <= 0:
-        return tid, empty_attempts(n), 0.0, _timeout_message(limit)[:200]
     res, err = empty_attempts(n), None
     finished = False
     armed = False
     previous = None
+    saved_mask = _current_sigmask()
 
     def _on_alarm(signum, frame):
         raise TaskTimeout(_timeout_message(limit))
 
     try:
+        if limit is not None and limit <= 0:
+            res, err = empty_attempts(n), _timeout_message(limit)[:200]
+            return tid, res, 0.0, err
         if hasattr(signal, "setitimer") and hasattr(signal, "SIGALRM"):
             previous = signal.signal(signal.SIGALRM, _on_alarm)
             signal.setitimer(signal.ITIMER_REAL, float(limit))
@@ -165,6 +262,8 @@ def _run_task(args):
             res, err = empty_attempts(n), _timeout_message(limit)[:200]
         else:
             res, err = coerce_solver_result(raw, n)
+            # Validate in the worker, before the parent compares with ==.
+            res = _with_valid_attempts(res)
     except TaskTimeout as exc:
         if not finished:
             res, err = empty_attempts(n), str(exc)[:200]
@@ -181,8 +280,126 @@ def _run_task(args):
                 signal.setitimer(signal.ITIMER_REAL, 0)
             except TaskTimeout:
                 pass
+            # Unblock SIGALRM while the handler is SIG_IGN, so a pending alarm
+            # is discarded. Then put the previous handler back.
+            _restore_sigmask(saved_mask)
+            saved_mask = None
             signal.signal(signal.SIGALRM, previous)
+        _restore_sigmask(saved_mask)
     return tid, res, round(time.monotonic() - t0, 3), err
+
+
+def _close_conn(conn):
+    try:
+        conn.close()
+    except Exception:
+        pass
+
+
+def _worker_main(solver_path, write_conn, read_conn, job):
+    """One task in a fresh process. os._exit skips this and the parent records a crash."""
+    _close_conn(read_conn)
+    try:
+        _init(solver_path)
+        write_conn.send(_run_task(job))
+    except BaseException as exc:
+        tid, task = job[0], job[1]
+        try:
+            write_conn.send((tid, empty_attempts(len(task["test"])), 0.0, repr(exc)[:200]))
+        except Exception:
+            pass
+    finally:
+        _close_conn(write_conn)
+
+
+def _crash_payload(job, started):
+    tid, task = job[0], job[1]
+    secs = round(time.monotonic() - started, 3)
+    return tid, empty_attempts(len(task["test"])), secs, WORKER_CRASH
+
+
+def _retire_worker(slot):
+    _close_conn(slot["conn"])
+    proc = slot["proc"]
+    if proc.is_alive():
+        proc.terminate()
+    proc.join(5)
+
+
+def _reap_worker(slot, results):
+    """Record a finished payload, or a crash when the process died without one."""
+    conn = slot["conn"]
+    if conn.poll():
+        try:
+            payload = conn.recv()
+        except (EOFError, OSError):
+            payload = _crash_payload(slot["job"], slot["t0"])
+        results[payload[0]] = payload
+        _retire_worker(slot)
+        return True
+    if slot["proc"].exitcode is None:
+        return False
+    results[slot["job"][0]] = _crash_payload(slot["job"], slot["t0"])
+    _retire_worker(slot)
+    return True
+
+
+def collect_jobs(jobs, solver_path, workers, total_time_limit, t_start=None):
+    """Run jobs on fresh fork workers.
+
+    A worker that calls os._exit is recorded as crashed and the next job starts
+    on a new process. Unfinished jobs stay out of the result map once the wall
+    cap is hit, matching the previous pool.
+    """
+    ctx = mp.get_context("fork")
+    t_start = time.monotonic() if t_start is None else t_start
+    workers = max(1, int(workers))
+    pending = []
+    queue = list(jobs)
+    results = {}
+    hit_cap = False
+
+    def launch():
+        job = queue.pop(0)
+        read_conn, write_conn = ctx.Pipe(duplex=False)
+        proc = ctx.Process(target=_worker_main, args=(solver_path, write_conn, read_conn, job))
+        proc.start()
+        write_conn.close()
+        pending.append({"proc": proc, "conn": read_conn, "job": job, "t0": time.monotonic()})
+
+    try:
+        while len(results) < len(jobs):
+            remaining = total_time_limit - (time.monotonic() - t_start)
+            if remaining <= 0:
+                hit_cap = True
+                break
+            while queue and len(pending) < workers:
+                launch()
+            if not pending:
+                break
+            ready = mp_connection.wait(
+                [slot["conn"] for slot in pending], timeout=min(0.2, max(0.0, remaining))
+            )
+            ready_ids = {id(conn) for conn in ready}
+            still = []
+            for slot in pending:
+                died = slot["proc"].exitcode is not None
+                if id(slot["conn"]) in ready_ids or died:
+                    if not _reap_worker(slot, results):
+                        still.append(slot)
+                else:
+                    still.append(slot)
+            pending = still
+        if hit_cap:
+            still = []
+            for slot in pending:
+                if not _reap_worker(slot, results):
+                    still.append(slot)
+            pending = still
+    finally:
+        for slot in pending:
+            _retire_worker(slot)
+    return results, hit_cap
 
 
 def score_finished_task(task, res, secs, err):
@@ -192,11 +409,17 @@ def score_finished_task(task, res, secs, err):
         res = empty_attempts(n)
         if not err:
             err = NON_DICT_RESULT
+    else:
+        res = _with_valid_attempts(res)
     rows = []
     for i, t in enumerate(task["test"]):
         r = res[i] if i < len(res) and isinstance(res[i], dict) else empty_attempts(1)[0]
-        att = (r.get("attempts") or [])[:MAX_ATTEMPTS]
-        ok = any(x == t["output"] for x in att)
+        att = r.get("attempts") or []
+        if not isinstance(att, list):
+            att = []
+        att = att[:MAX_ATTEMPTS]
+        # Equality runs only on a decoded ARC grid. None marks an invalid attempt.
+        ok = any(grid == t["output"] for grid in att if _is_arc_grid(grid))
         rows.append({"test_index": i, "correct": ok, "n_attempts": len(att),
                      "confidence": coerce_confidence(r.get("confidence", 0.0)),
                      "meta": r.get("meta", {})})
@@ -266,28 +489,18 @@ def main():
     done = {}
     conf_log = open(os.path.join(out, "confidence.jsonl"), "w")
     jobs = [(tid, tasks[tid], a.task_time_limit, cfg) for tid in ids]
-    pool = mp.get_context("fork").Pool(a.workers, initializer=_init, initargs=(a.solver,), maxtasksperchild=50)
-    it = pool.imap_unordered(_run_task, jobs)
-    hit_cap = False
-    while len(done) < len(jobs):
-        remaining = a.total_time_limit - (time.monotonic() - t_start)
-        if remaining <= 0:
-            hit_cap = True
-            break
-        try:
-            tid, res, secs, err = it.next(timeout=remaining)
-        except mp.TimeoutError:
-            hit_cap = True
-            break
-        task = tasks[tid]
-        rec = score_finished_task(task, res, secs, err)
-        for row in rec["tests"]:
-            conf_log.write(json.dumps({"task": tid, "test_index": row["test_index"],
-                                       "confidence": row["confidence"], "n_attempts": row["n_attempts"],
-                                       "correct": row["correct"], "seconds": secs}) + "\n")
-        done[tid] = rec
-    pool.terminate()
-    conf_log.close()
+    try:
+        results, hit_cap = collect_jobs(jobs, a.solver, a.workers, a.total_time_limit, t_start)
+        for tid, res, secs, err in results.values():
+            task = tasks[tid]
+            rec = score_finished_task(task, res, secs, err)
+            for row in rec["tests"]:
+                conf_log.write(json.dumps({"task": tid, "test_index": row["test_index"],
+                                           "confidence": row["confidence"], "n_attempts": row["n_attempts"],
+                                           "correct": row["correct"], "seconds": secs}) + "\n")
+            done[tid] = rec
+    finally:
+        conf_log.close()
     wall = round(time.monotonic() - t_start, 1)
 
     scored_tests = sum(len(tasks[t]["test"]) for t in ids)

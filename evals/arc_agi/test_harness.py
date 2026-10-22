@@ -8,6 +8,7 @@ import sys
 import tempfile
 import time
 import unittest
+import unittest.mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 spec = importlib.util.spec_from_file_location("arc_harness", os.path.join(HERE, "run.py"))
@@ -297,6 +298,134 @@ class NitTests(unittest.TestCase):
             ).stdout
             self.assertNotIn("outside.txt", limited)
             self.assertIs(run.repo_is_dirty(cwd=nested), True)
+
+
+class AttemptValidationTests(unittest.TestCase):
+    def _scored(self, task, attempts):
+        class Solver:
+            def solve(self, train, tests, limit, cfg):
+                return [{"attempts": attempts, "confidence": 1.0, "meta": {}} for _ in tests]
+
+        run._SOLVER = Solver()
+        _tid, res, secs, err = run._run_task(("grid", task, 2.0, {}))
+        self.assertIsNone(err)
+        rec = run.score_finished_task(task, res, secs, err)
+        self.assertEqual(sum(row["correct"] for row in rec["tests"]), 0)
+        self.assertFalse(rec["solved"])
+        return rec
+
+    def test_mock_any_attempt_scores_zero(self):
+        self.assertEqual(unittest.mock.ANY, [[1]])
+        rec = self._scored(_task(), [unittest.mock.ANY])
+        self.assertFalse(rec["tests"][0]["correct"])
+        self.assertEqual(rec["tests"][0]["n_attempts"], 1)
+        self.assertGreaterEqual(rec["tests"][0]["meta"].get("invalid_attempts", 0), 1)
+
+    def test_bool_and_float_cells_score_zero(self):
+        self.assertEqual([[True]], [[1]])
+        self.assertEqual([[1.0]], [[1]])
+        for attempts in ([[[True]]], [[[1.0]]]):
+            rec = self._scored(_task(), attempts)
+            self.assertFalse(rec["tests"][0]["correct"])
+
+    def test_invalid_dimensions_score_zero(self):
+        cases = (
+            [],
+            [[]],
+            [[0] * 31],
+            [[0] for _ in range(31)],
+            [[0, 1], [0]],
+        )
+        for grid in cases:
+            task = {
+                "train": [{"input": [[0]], "output": grid}],
+                "test": [{"input": [[0]], "output": grid}],
+            }
+            self.assertEqual(grid, task["test"][0]["output"])
+            rec = self._scored(task, [grid])
+            self.assertFalse(rec["tests"][0]["correct"])
+            self.assertGreaterEqual(rec["tests"][0]["meta"].get("invalid_attempts", 0), 1)
+
+
+class SignalMaskTests(unittest.TestCase):
+    def test_sigalrm_mask_is_restored_for_the_next_task(self):
+        def solve(train, tests, limit, cfg):
+            signal.pthread_sigmask(signal.SIG_BLOCK, [signal.SIGALRM])
+            return [{"attempts": [[[1]]], "confidence": 1.0, "meta": {}} for _ in tests]
+
+        run._SOLVER = type("Mask", (), {"solve": staticmethod(solve)})()
+        before = signal.pthread_sigmask(signal.SIG_BLOCK, [])
+        try:
+            run._run_task(("mask", _task(), 2.0, {}))
+            after = signal.pthread_sigmask(signal.SIG_BLOCK, [])
+            self.assertNotIn(signal.SIGALRM, after)
+            self.assertEqual(signal.SIGALRM in before, signal.SIGALRM in after)
+
+            class Swallow:
+                def solve(self, train, tests, limit, cfg):
+                    try:
+                        time.sleep(5)
+                    except Exception:
+                        time.sleep(5)
+                    return [{"attempts": [[[1]]], "confidence": 1.0, "meta": {}} for _ in tests]
+
+            run._SOLVER = Swallow()
+            started = time.monotonic()
+            _tid, _res, _secs, err = run._run_task(("next", _task(), 0.3, {}))
+            self.assertLess(time.monotonic() - started, 2.0)
+            self.assertIn("timeout", err)
+        finally:
+            signal.pthread_sigmask(signal.SIG_UNBLOCK, [signal.SIGALRM])
+
+
+class WorkerCrashTests(unittest.TestCase):
+    def test_os_exit_is_recorded_and_later_tasks_still_run(self):
+        with tempfile.TemporaryDirectory() as directory:
+            solver = os.path.join(directory, "solver.py")
+            with open(solver, "w", encoding="utf-8") as handle:
+                handle.write(
+                    "import os\n"
+                    "def solve(train, tests, limit, cfg):\n"
+                    "    if tests and tests[0] and tests[0][0] and tests[0][0][0] == 9:\n"
+                    "        os._exit(9)\n"
+                    "    return [{'attempts': [[[1]]], 'confidence': 1.0, 'meta': {}} for _ in tests]\n"
+                )
+            crash_task = {
+                "train": [{"input": [[0]], "output": [[1]]}],
+                "test": [{"input": [[9]], "output": [[1]]}],
+            }
+            jobs = [("die", crash_task, 2.0, {}), ("live", _task(), 2.0, {})]
+            started = time.monotonic()
+            results, hit_cap = run.collect_jobs(jobs, solver, workers=1, total_time_limit=30.0)
+            self.assertLess(time.monotonic() - started, 10.0)
+            self.assertFalse(hit_cap)
+            self.assertEqual(set(results), {"die", "live"})
+            self.assertEqual(results["die"][3], run.WORKER_CRASH)
+            self.assertIsNone(results["live"][3])
+            crashed = run.score_finished_task(crash_task, results["die"][1], results["die"][2], results["die"][3])
+            lived = run.score_finished_task(_task(), results["live"][1], results["live"][2], results["live"][3])
+            self.assertFalse(crashed["solved"])
+            self.assertTrue(lived["solved"])
+            self.assertEqual(len(results), 2)
+
+
+class ConfidenceClampTests(unittest.TestCase):
+    def test_confidence_is_clamped_before_bucketing(self):
+        self.assertEqual(run.clamp_confidence(-0.4), 0.0)
+        self.assertEqual(run.clamp_confidence(1.7), 1.0)
+        self.assertEqual(run.clamp_confidence(0.5), 0.5)
+        negative = run.score_finished_task(
+            _task(), [{"attempts": [[[1]]], "confidence": -0.4, "meta": {}}], 0.1, None
+        )
+        high = run.score_finished_task(
+            _task(), [{"attempts": [[[1]]], "confidence": 1.7, "meta": {}}], 0.1, None
+        )
+        self.assertEqual(negative["tests"][0]["confidence"], -0.4)
+        self.assertEqual(high["tests"][0]["confidence"], 1.7)
+        counts = run.confidence_counts({"negative": negative, "high": high})
+        self.assertEqual(counts["0.00-0.25"], {"n": 1, "correct": 1})
+        self.assertEqual(counts["0.75-1.00"], {"n": 1, "correct": 1})
+        self.assertFalse(any(key.startswith("-") for key in counts))
 
 
 if __name__ == "__main__":
