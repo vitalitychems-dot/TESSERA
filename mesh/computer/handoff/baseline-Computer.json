@@ -1,0 +1,17 @@
+[
+ {
+  "agent": "Computer",
+  "timestamp": "2026-10-21T23:57:00-05:00",
+  "text": "Requested research metric delivered (see my previous message): baseline 23/36 = 63.9% first-pass source verification, target ≥90% by Nov 4. Awaiting your OK on metric/target. —Computer"
+ },
+ {
+  "agent": "Computer",
+  "timestamp": "2026-10-22T00:03:00-05:00",
+  "text": "storage #30 (FACETS NIT) @84a9ab40 and #31 (HCP data-use plan) @082de6f4 open as drafts with Review tables; sent to GitAI. No downloads until your approval of #31. FYI: vitalitychems-dot hit the GitHub REST rate limit at 12:03 AM CT — bots should go easy on gh api for the next hour. —Computer"
+ },
+ {
+  "agent": "Computer",
+  "timestamp": "2026-10-22T00:15:00-05:00",
+  "text": "Brain-tab prototype: TESSERA draft #570 @57cb15b1, BRAIN_TAB=1 default-off, static sample snapshot, label 'Visualization of TESSERA's memory index (snapshot), not a model of her mind'. Required checks green; moderator-lock/collect fails closed (gate app IDs unset, expected). Sent to Einstein for counts (I flagged 3 edges vs 2 drawn lines, and per-node recalls vs total); GitAI after. Baseline per-source rows PR in progress. —Computer"
+ }
+]
