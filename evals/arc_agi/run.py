@@ -16,6 +16,32 @@ ARC_REPO = "fchollet/ARC-AGI"
 ARC_SHA = "399030444e0ab0cc8b4e199870fb20b863846f34"
 EXPECTED_TASKS, EXPECTED_TESTS = 400, 419
 MAX_ATTEMPTS = 2
+# Names resolve to solvers/<name>.py. A path is left unchanged for plugins.
+DEFAULT_SOLVER = "dsl_search"
+_SOLVER_NAMES = ("dsl_search", "dsl_search_v2")
+
+
+def resolve_solver(value):
+    """Map a solver name to its file. Any other value is a path, unchanged."""
+    if value in _SOLVER_NAMES:
+        return os.path.join(HERE, "solvers", value + ".py")
+    return value
+
+
+def parse_args(argv=None):
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--solver", default=DEFAULT_SOLVER, help="dsl_search (default), dsl_search_v2, or a solver file")
+    ap.add_argument("--config", default='{"depth": 2, "retry_depth": 3, "max_programs": 50}', help="JSON for the solver")
+    ap.add_argument("--seed", type=int, default=20261021, help="orders tasks and draws --subset")
+    ap.add_argument("--subset", type=int, default=0, help="score only N seeded-random tasks (0 = all 400)")
+    ap.add_argument("--task-time-limit", type=float, default=8.0, help="seconds per task (solver deadline)")
+    ap.add_argument("--total-time-limit", type=float, default=600.0, help="wall cap; unstarted tasks score 0")
+    ap.add_argument("--workers", type=int, default=6)
+    ap.add_argument("--cache", default=os.path.join(HERE, ".data"))
+    ap.add_argument("--out", default=os.path.join(HERE, "results"))
+    args = ap.parse_args(argv)
+    args.solver = resolve_solver(args.solver)
+    return args
 # Full digest already recorded in RESULTS.md and the baseline summary.json.
 PINNED_DATASET_SHA256 = "4d9a15441fd20199f4fb419641ead13aaef357695abcc7e0ea243e3548a16dfb"
 NON_DICT_RESULT = "solver returned a non-dict result"
@@ -455,17 +481,7 @@ def env_info(cmd):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--solver", default=os.path.join(HERE, "solvers", "dsl_search.py"))
-    ap.add_argument("--config", default='{"depth": 2, "retry_depth": 3, "max_programs": 50}', help="JSON for the solver")
-    ap.add_argument("--seed", type=int, default=20261021, help="orders tasks and draws --subset")
-    ap.add_argument("--subset", type=int, default=0, help="score only N seeded-random tasks (0 = all 400)")
-    ap.add_argument("--task-time-limit", type=float, default=8.0, help="seconds per task (solver deadline)")
-    ap.add_argument("--total-time-limit", type=float, default=600.0, help="wall cap; unstarted tasks score 0")
-    ap.add_argument("--workers", type=int, default=6)
-    ap.add_argument("--cache", default=os.path.join(HERE, ".data"))
-    ap.add_argument("--out", default=os.path.join(HERE, "results"))
-    a = ap.parse_args()
+    a = parse_args()
     cmd = " ".join([os.path.basename(sys.executable)] + [os.path.relpath(sys.argv[0])] + sys.argv[1:])
     cfg = json.loads(a.config)
 
