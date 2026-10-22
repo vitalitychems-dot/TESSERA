@@ -1,0 +1,28 @@
+# Reviewed hostnames for public URL checks. One hostname per line.
+# A listed host also allows its subdomains (api.github.com via github.com).
+# This file does not relax database URL rules.
+# Blank lines and # comments are ignored. No schemes or paths.
+
+github.com
+api.github.com
+docs.github.com
+doc.libsodium.org
+owasp.org
+cheatsheetseries.owasp.org
+www.w3.org
+age-encryption.org
+csrc.nist.gov
+pages.nist.gov
+learn.microsoft.com
+passkeys.dev
+fidoalliance.org
+# Badge and citation hosts linked from checkout notes (.txt is scanned).
+img.shields.io
+python.org
+zenodo.org
+doi.org
+brain-cog.network
+# ESLint version-support host cited by the eslint deprecation notice in pnpm-lock.yaml.
+eslint.org
+# Default public Solana RPC host used by the api-server wallet observer.
+api.mainnet-beta.solana.com
