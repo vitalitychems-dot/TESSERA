@@ -11,7 +11,8 @@ permissions:
   contents: read
   pull-requests: read
 
-# A push to main and the daily schedule share this group and both finish.
+# cancel-in-progress is false for schedule and for push to main, so an in-progress run is not cancelled.
+# A newer queued run can still replace an older pending one in this group, so a burst or the 06:00 schedule can show as cancelled. Coverage holds through the latest 30 commits.
 # Schedule uses the default branch ref, and event_name covers a schedule that is not on that ref.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
