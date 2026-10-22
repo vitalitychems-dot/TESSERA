@@ -1,0 +1,45 @@
+# ==============================================================================
+# ROLE IDENTIFICATION: Local simulation scaffold for the TESSERA monorepo.
+# No web scraping, no remote quantum execution, and no automatic git commits.
+# ==============================================================================
+
+Mission: deploy an airgapped, tokenless, self-improving local AGI network engine
+running in live software simulation mode until physical hardware deployment.
+
+## 1. Port Map (source of truth: README.md "Port map"; local suite scheme)
+- Tessera Web:               http://localhost:3000   (TESSERA_WEB_PORT)
+- Tessera API Server:        http://localhost:5000   (TESSERA_API_PORT; suite launcher only)
+- UI Mockup Sandbox:         http://localhost:5173   (MOCKUP_SANDBOX_PORT)
+- GitAI:                     http://127.0.0.1:4183   (GITAI_PORT; studio tab at http://127.0.0.1:4173/gitai)
+- 3D Studio floor (v2):      http://127.0.0.1:4173   (PORT)
+- preview/ Vite app:         http://127.0.0.1:4174   (PORT)
+- Tessera Console (Next):    http://127.0.0.1:4391   (TESSERA_CONSOLE_PORT)
+- Gitbook MCP HTTP:          http://127.0.0.1:8787   (GITBOOK_HTTP_PORT)
+- Reticulum Local Mesh Gate: 127.0.0.1:4242 -- PLANNED, NOT YET IMPLEMENTED (no code
+  listens on this port; LIGHTNING spec pending from the Network lane)
+- Replit artifact scheme is separate and not interchangeable: web 18514, API 8080 (/api),
+  mockup 8081. 8080 is the Replit API, not GitAI.
+
+## 2. Hardened Data Gate
+- Agents read only from the static local filesystem: mesh/drops/ and mesh/crystal_matrix/.
+- Fail-closed: if DATABASE_URL does not resolve to 127.0.0.1 or localhost,
+  the service terminates with HTTP 503.
+
+## 3. Visual Tokens
+- Ink Ground:      #070b10
+- Glass Edge:      #7ef0d4
+- Fracture Orange: #ff5c39
+- Bone Text:       #f3efe6
+- Fonts: Syne (display), Fragment Mono (code/data)
+- Facets: Water (Glass), Fire, Lightning, Diamond, Spiral
+
+## 4. Target Hardware (simulation until purchased)
+- Physarum polycephalum plasmodium culture ........ $15.00
+- LILYGO T-Beam ESP32 LoRa V1.1 915MHz ............. $35.00
+- Bingfu 915MHz omni-directional antenna ........... $18.00
+- Mini Tesla coil flyback loop module .............. $12.00
+- ESP32-WROOM-32E dev kit .......................... $7.00
+- OV7670 CMOS camera module ........................ $9.00
+- Hardware subtotal: $96.00 (stated target was $111; $15 unallocated)
+- IBM Quantum open tier ............................ $0.00 (cloud, free)
+- Cortical Labs CL1 cloud .......................... $300/week (future; currently skipped, using simulation loops)
