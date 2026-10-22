@@ -75,7 +75,7 @@ test("gitleaks config allowlists exact secrets only", () => {
 });
 
 test("secret-scan workflow is pinned, read-only, and secretless", () => {
-  const text = readFileSync(join(root, ".github/workflows/secret-scan.yml"), "utf8");
+  const text = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
   const installer = readFileSync(join(root, "scripts/install-gitleaks.sh"), "utf8");
   assert.equal(text.includes("pull_request_target"), false);
   assert.match(text, /pull_request:\n\s+branches: \[main\]/);

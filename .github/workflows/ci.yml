@@ -1,22 +1,31 @@
 name: CI
 
+# One workflow for validate, gitleaks, and the pull request gates.
+# Do not add the target variant of pull_request: that event runs with the
+# base repository's secrets and a write token.
+# Do not add a paths filter. The required checks must run on every pull request.
 on:
-  push:
-    branches: [main]
   pull_request:
+    branches: [main]
+  push:
     branches: [main]
 
 permissions:
   contents: read
 
+# Pull requests cancel a superseded run on the same ref. Pushes to main do not.
+# Same group and cancel expression as ci/cut-actions-minutes-2026-10-21 (#541).
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  # pnpm and Node setup run only here. This is the only job that installs dependencies.
+  # Checkout stays on each job: gitleaks, diff-scan, and author-check each read git
+  # history, and GitHub starts each required check on its own runner.
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:16
@@ -63,3 +72,102 @@ jobs:
             {"birth":{"date":"2000-01-01","time":"12:00","location":"Synthetic Test Location","timezone":"UTC","houseSystem":"Whole Sign"},"core":{"sun":{"sign":"Aries","degree":"0","house":1},"moon":{"sign":"Taurus","degree":"0","house":2},"ascendant":{"sign":"Gemini","degree":"0"}},"planets":{"mercury":{"sign":"Aries","degree":"0","house":1},"venus":{"sign":"Taurus","degree":"0","house":2},"mars":{"sign":"Gemini","degree":"0","house":3},"jupiter":{"sign":"Cancer","degree":"0","house":4},"saturn":{"sign":"Leo","degree":"0","house":5},"uranus":{"sign":"Virgo","degree":"0","house":6},"neptune":{"sign":"Libra","degree":"0","house":7},"pluto":{"sign":"Scorpio","degree":"0","house":8}},"nodes":{"northNode":{"sign":"Sagittarius","degree":"0","house":9}},"aspects":["Synthetic test aspect"],"themes":{"dominance":"Synthetic","rising":"Gemini","moonSign":"Taurus","houseConcentration":["1st house"],"chineseZodiac":"Test"}}
       - name: Build all workspace applications
         run: pnpm run build
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # gitleaks detect walks commit history, so the clone needs every commit.
+          fetch-depth: 0
+
+      - name: Install pinned gitleaks
+        # gitleaks v8.30.1 sha256 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        env:
+          GITHUB_TOKEN: ""
+          GH_TOKEN: ""
+        run: sh scripts/install-gitleaks.sh
+
+      - name: Self-test seeded finding and clean tree
+        env:
+          GITHUB_TOKEN: ""
+          GH_TOKEN: ""
+        run: node --test scripts/gitleaks-fixture-test.mjs
+
+      - name: Scan repository
+        env:
+          GITHUB_TOKEN: ""
+          GH_TOKEN: ""
+        run: node scripts/gitleaks-scan.mjs
+
+  diff-scan:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Report protected diffs
+        env:
+          # Off until a later change sets this to 1. Findings stay in the summary.
+          DIFF_SCAN_ENFORCE: "0"
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/pr-diff-scan.mjs
+
+  author-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Check commit author and committer
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          # Optional allowlist of real agent names for Original-Author trailers (repo variable).
+          AUTHOR_AGENTS: ${{ vars.AUTHOR_AGENTS }}
+        run: node scripts/pr-author-check.mjs
+
+  ready-for-gate:
+    needs: [diff-scan, author-check]
+    if: github.event_name == 'pull_request' && success()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Post or update the ready comment
+        env:
+          # Automatic workflow token only. Do not switch this to a repository secret.
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/ready-for-gate-comment.mjs

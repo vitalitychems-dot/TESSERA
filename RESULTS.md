@@ -12,10 +12,10 @@ Every pull request author login is `vitalitychems-dot`, the repository owner.
 
 | Check | Where it runs | A pull request is flagged when |
 | --- | --- | --- |
-| Gitleaks | `secret-scan.yml`, enforcing | The scanner reports a finding in commits reachable from `main`, or in commits that are only on the pull request head |
+| Gitleaks | `ci.yml` job `gitleaks`, enforcing | The scanner reports a finding in commits reachable from `main`, or in commits that are only on the pull request head |
 | Provenance | `main-provenance.yml`, report-only (`PROVENANCE_ENFORCE=0`) | The squash commit on `main` has no merged pull request, author or committer name Tessera, an `@gmail.com` address, or a Manus mark |
-| Diff scan | `pr-gates.yml`, report-only (`DIFF_SCAN_ENFORCE=0`) | The diff changes a `rules` path segment, a gate path, `CODEOWNERS`, or permission lines in `.github/workflows`, and the pull request author is not the repository owner |
-| Author check | `pr-gates.yml`, enforcing | Any pull request commit's author or committer name is Tessera, or either email is not `332565808+vitalitychems-dot@users.noreply.github.com` |
+| Diff scan | `ci.yml` job `diff-scan`, report-only (`DIFF_SCAN_ENFORCE=0`) | The diff changes a `rules` path segment, a gate path, `CODEOWNERS`, or permission lines in `.github/workflows`, and the pull request author is not the repository owner |
+| Author check | `ci.yml` job `author-check`, enforcing | Any pull request commit's author or committer name is Tessera, or either email is not `332565808+vitalitychems-dot@users.noreply.github.com` |
 
 Gate paths match a segment such as `merge-gate.mjs`, `rick-gates.ts`, or `TesseractKeyGate.tsx`. `aggregate.ts` and `delegate.ts` do not match. A workflow edit that does not change permission lines does not match. #300 edits `.github/workflows/ci.yml` and is not a protected touch.
 
