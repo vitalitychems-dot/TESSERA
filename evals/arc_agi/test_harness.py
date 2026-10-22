@@ -2,6 +2,7 @@
 import importlib.util
 import json
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -95,6 +96,60 @@ class TimeoutTests(unittest.TestCase):
         self.assertIn("timeout", err)
         self.assertEqual(res[0]["attempts"], [])
 
+    def _late_solved(self, solve):
+        run._SOLVER = type("Late", (), {"solve": staticmethod(solve)})()
+        _tid, res, secs, err = run._run_task(("late", _task(), 0.2, {}))
+        self.assertGreater(secs, 0.45)
+        self.assertTrue(run.is_harness_timeout(err))
+        self.assertIn("timeout: task exceeded", err)
+        self.assertEqual(res[0]["attempts"], [])
+        rec = run.score_finished_task(_task(), res, secs, err)
+        self.assertFalse(rec["solved"])
+        self.assertEqual(run.tasks_timed_out({"late": rec}), 1)
+        self.assertEqual(run.tasks_timed_out({"ok": {"error": None}}), 0)
+
+    def test_baseexception_swallow_cannot_dodge_timeout(self):
+        def solve(train, tests, limit, cfg):
+            try:
+                time.sleep(0.6)
+            except BaseException:
+                time.sleep(0.6)
+            return [{"attempts": [[[1]]], "confidence": 1.0, "meta": {}}]
+
+        self._late_solved(solve)
+
+    def test_setitimer_disarm_cannot_dodge_timeout(self):
+        def solve(train, tests, limit, cfg):
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            time.sleep(0.6)
+            return [{"attempts": [[[1]]], "confidence": 1.0, "meta": {}}]
+
+        self._late_solved(solve)
+
+    def test_alarm_disarm_cannot_dodge_timeout(self):
+        def solve(train, tests, limit, cfg):
+            signal.alarm(0)
+            time.sleep(0.6)
+            return [{"attempts": [[[1]]], "confidence": 1.0, "meta": {}}]
+
+        self._late_solved(solve)
+
+    def test_sigalrm_ignore_cannot_dodge_timeout(self):
+        def solve(train, tests, limit, cfg):
+            signal.signal(signal.SIGALRM, signal.SIG_IGN)
+            time.sleep(0.6)
+            return [{"attempts": [[[1]]], "confidence": 1.0, "meta": {}}]
+
+        self._late_solved(solve)
+
+    def test_custom_alarm_handler_cannot_dodge_timeout(self):
+        def solve(train, tests, limit, cfg):
+            signal.signal(signal.SIGALRM, lambda signum, frame: None)
+            time.sleep(0.6)
+            return [{"attempts": [[[1]]], "confidence": 1.0, "meta": {}}]
+
+        self._late_solved(solve)
+
 
 class NonDictResultTests(unittest.TestCase):
     def _run(self, payload):
@@ -146,6 +201,45 @@ class NonDictResultTests(unittest.TestCase):
         self.assertEqual(rec["error"], run.NON_DICT_RESULT)
         self.assertFalse(rec["tests"][0]["correct"])
 
+    def test_non_numeric_confidence_still_writes_summary(self):
+        none_row = run.score_finished_task(
+            _task(), [{"attempts": [[[1]]], "confidence": None, "meta": {}}], 0.1, None
+        )
+        text_row = run.score_finished_task(
+            _task(), [{"attempts": [[[1]]], "confidence": "high", "meta": {}}], 0.1, None
+        )
+        self.assertEqual(none_row["tests"][0]["confidence"], 0.0)
+        self.assertEqual(text_row["tests"][0]["confidence"], 0.0)
+        counts = run.confidence_counts({"none": none_row, "text": text_row})
+        self.assertEqual(counts["0.00-0.25"], {"n": 2, "correct": 2})
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "summary.json")
+            run.write_summary(path, {"confidence_counts": counts, "tasks_timed_out": 0})
+            with open(path, encoding="utf-8") as handle:
+                loaded = json.load(handle)
+        self.assertEqual(loaded["tasks_timed_out"], 0)
+        self.assertEqual(loaded["confidence_counts"]["0.00-0.25"]["n"], 2)
+
+    def test_systemexit_is_recorded_not_raised(self):
+        class Boom:
+            def solve(self, train, tests, limit, cfg):
+                raise SystemExit(7)
+
+        run._SOLVER = Boom()
+        _tid, res, _secs, err = run._run_task(("exit", _task(), 2.0, {}))
+        self.assertIn("SystemExit", err)
+        self.assertEqual(res[0]["attempts"], [])
+
+    def test_keyboardinterrupt_is_recorded_not_raised(self):
+        class Boom:
+            def solve(self, train, tests, limit, cfg):
+                raise KeyboardInterrupt()
+
+        run._SOLVER = Boom()
+        _tid, res, _secs, err = run._run_task(("int", _task(), 2.0, {}))
+        self.assertIn("KeyboardInterrupt", err)
+        self.assertEqual(res[0]["attempts"], [])
+
 
 class NitTests(unittest.TestCase):
     def test_summary_json_has_a_trailing_newline(self):
@@ -175,24 +269,34 @@ class NitTests(unittest.TestCase):
         self.assertTrue(run.repo_is_dirty(run=fake))
         self.assertEqual(calls[0][0], ["git", "status", "--porcelain"])
 
-    def test_real_git_sees_a_file_outside_the_harness_dir(self):
-        root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], cwd=HERE, text=True).strip()
-        probe = os.path.join(root, "_arc_git_dirty_probe")
-        with open(probe, "w", encoding="utf-8") as handle:
-            handle.write("probe\n")
-        try:
+    def test_git_dirty_is_unknown_outside_a_repo(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertIsNone(run.repo_is_dirty(cwd=directory))
+
+        def broken(*_args, **_kwargs):
+            raise OSError("git missing")
+
+        self.assertIsNone(run.repo_is_dirty(run=broken))
+
+        class Failed:
+            returncode = 128
+            stdout = ""
+
+        self.assertIsNone(run.repo_is_dirty(run=lambda *_a, **_k: Failed()))
+
+    def test_git_status_sees_a_file_outside_the_workdir(self):
+        with tempfile.TemporaryDirectory() as root:
+            subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True, text=True)
+            nested = os.path.join(root, "evals", "arc_agi")
+            os.makedirs(nested)
+            with open(os.path.join(root, "outside.txt"), "w", encoding="utf-8") as handle:
+                handle.write("probe\n")
             limited = subprocess.run(
                 ["git", "status", "--porcelain", "--", "evals/arc_agi"],
                 cwd=root, capture_output=True, text=True, check=False,
             ).stdout
-            self.assertNotIn("_arc_git_dirty_probe", limited)
-            seen = subprocess.run(
-                run.GIT_STATUS_ARGV, cwd=HERE, capture_output=True, text=True, check=False,
-            ).stdout
-            self.assertIn("_arc_git_dirty_probe", seen)
-            self.assertTrue(run.repo_is_dirty())
-        finally:
-            os.remove(probe)
+            self.assertNotIn("outside.txt", limited)
+            self.assertIs(run.repo_is_dirty(cwd=nested), True)
 
 
 if __name__ == "__main__":

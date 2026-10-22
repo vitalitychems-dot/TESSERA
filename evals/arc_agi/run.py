@@ -86,15 +86,51 @@ def _timeout_message(limit):
     return f"timeout: task exceeded {limit}s"
 
 
-def repo_is_dirty(run=None):
-    """True when git status reports any change in the repository, not one directory."""
+def is_harness_timeout(err):
+    return isinstance(err, str) and err.startswith("timeout:")
+
+
+def tasks_timed_out(done):
+    """Tasks the harness recorded as over the wall-clock limit."""
+    return sum(1 for record in done.values() if is_harness_timeout(record.get("error")))
+
+
+def coerce_confidence(value):
+    """A missing or non-numeric confidence is 0. Non-finite values are 0 too."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    if number != number or number == float("inf") or number == float("-inf"):
+        return 0.0
+    return number
+
+
+def confidence_counts(done):
+    buckets = {}
+    for record in done.values():
+        for row in record["tests"]:
+            if not row["n_attempts"]:
+                continue
+            conf = coerce_confidence(row.get("confidence", 0.0))
+            band = min(int(conf * 4), 3)
+            lo = band / 4
+            key = f"{lo:.2f}-{lo + 0.25:.2f}"
+            slot = buckets.setdefault(key, [0, 0])
+            slot[0] += 1
+            slot[1] += row["correct"]
+    return {key: {"n": counts[0], "correct": counts[1]} for key, counts in sorted(buckets.items())}
+
+
+def repo_is_dirty(run=None, cwd=None):
+    """True or False from git status. None when git cannot be read (not a repo)."""
     run = run or subprocess.run
     try:
-        proc = run(GIT_STATUS_ARGV, cwd=HERE, capture_output=True, text=True, timeout=10)
+        proc = run(GIT_STATUS_ARGV, cwd=cwd or HERE, capture_output=True, text=True, timeout=10)
     except Exception:
-        return False
+        return None
     if getattr(proc, "returncode", 0) not in (0, None):
-        return False
+        return None
     return bool((getattr(proc, "stdout", "") or "").strip())
 
 
@@ -119,13 +155,22 @@ def _run_task(args):
             previous = signal.signal(signal.SIGALRM, _on_alarm)
             signal.setitimer(signal.ITIMER_REAL, float(limit))
             armed = True
+        solve_started = time.monotonic()
         raw = _SOLVER.solve(train, tests, limit, cfg)
+        solve_elapsed = time.monotonic() - solve_started
         finished = True
-        res, err = coerce_solver_result(raw, n)
+        # Wall clock around solve(). A late return is a timeout even if the
+        # solver swallowed the alarm or handed back a correct grid.
+        if limit is not None and solve_elapsed > float(limit):
+            res, err = empty_attempts(n), _timeout_message(limit)[:200]
+        else:
+            res, err = coerce_solver_result(raw, n)
     except TaskTimeout as exc:
         if not finished:
             res, err = empty_attempts(n), str(exc)[:200]
     except Exception as e:  # a crash scores as no attempts
+        res, err = empty_attempts(n), repr(e)[:200]
+    except BaseException as e:  # SystemExit and KeyboardInterrupt must not stall the pool
         res, err = empty_attempts(n), repr(e)[:200]
     finally:
         if armed:
@@ -153,7 +198,8 @@ def score_finished_task(task, res, secs, err):
         att = (r.get("attempts") or [])[:MAX_ATTEMPTS]
         ok = any(x == t["output"] for x in att)
         rows.append({"test_index": i, "correct": ok, "n_attempts": len(att),
-                     "confidence": r.get("confidence", 0.0), "meta": r.get("meta", {})})
+                     "confidence": coerce_confidence(r.get("confidence", 0.0)),
+                     "meta": r.get("meta", {})})
     return {"tests": rows, "solved": all(x["correct"] for x in rows), "seconds": secs, "error": err}
 
 
@@ -248,21 +294,12 @@ def main():
     preds = sum(x["correct"] for d in done.values() for x in d["tests"])
     solved = sum(d["solved"] for d in done.values())
     attempted = [d for d in done.values() if any(x["n_attempts"] for x in d["tests"])]
-    buckets = {}
-    for d in done.values():
-        for x in d["tests"]:
-            if x["n_attempts"]:
-                b = min(int(x["confidence"] * 4), 3)
-                lo = b / 4
-                k = f"{lo:.2f}-{lo + 0.25:.2f}"
-                s = buckets.setdefault(k, [0, 0])
-                s[0] += 1
-                s[1] += x["correct"]
     summary = {
         "harness": "evals/arc_agi/run.py", "solver": os.path.relpath(a.solver, HERE), "solver_config": cfg,
         "seed": a.seed, "subset": a.subset or None, "task_time_limit_s": a.task_time_limit,
         "total_time_limit_s": a.total_time_limit, "workers": a.workers, "max_attempts": MAX_ATTEMPTS,
         "tasks_in_run": len(ids), "tests_in_run": scored_tests, "tasks_finished": len(done),
+        "tasks_timed_out": tasks_timed_out(done),
         "hit_total_time_cap": hit_cap, "wall_seconds": wall,
         "predictions_correct": preds, "predictions_denominator": scored_tests,
         "tasks_solved": solved, "tasks_denominator": len(ids),
@@ -270,7 +307,7 @@ def main():
         "tests_with_any_attempt": sum(1 for d in done.values() for x in d["tests"] if x["n_attempts"]),
         "tasks_with_any_attempt": len(attempted),
         "precision_when_attempted": round(preds / max(1, sum(1 for d in done.values() for x in d["tests"] if x["n_attempts"])), 4),
-        "confidence_counts": {k: {"n": v[0], "correct": v[1]} for k, v in sorted(buckets.items())},
+        "confidence_counts": confidence_counts(done),
         "solved_task_ids": sorted(t for t, d in done.items() if d["solved"]),
         "environment": env, "utc_timestamp": stamp,
     }

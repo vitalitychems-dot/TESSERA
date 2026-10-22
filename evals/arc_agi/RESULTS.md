@@ -6,6 +6,8 @@ Predictions correct on that same run: 23 / 419. Wall time 75.6 s (cap not hit). 
 
 Precision when attempted: 23/26 = 0.885 (summary.json 0.8846). Wilson 95% CIs, Einstein, TESTED: 23/26 → [0.710, 0.960] and 23/419 → [0.037, 0.081].
 
+The per-task limit added after that run is wall-clock time around `solve()`. A later summary is only valid when it reports `tasks_timed_out`. The committed baseline summary does not have that field. Load sensitivity, REPORTED by GitAI: at a load average of about 59 the same command scored 22/419 predictions and 19/400 tasks, versus 23/419 and 20/400 at low load.
+
 Einstein's final on `#526` at `014f669f` is OK-WITH-FIXES. An independent rerun of the preregistered command reproduced the scores: 23/419 predictions and 20/400 tasks. That audit read the summary key `confidence_calibration`.
 
 ## Erratum
