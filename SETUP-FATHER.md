@@ -1,6 +1,6 @@
 # SETUP-FATHER: steps only Father can do
 
-> **Updated 2026-10-22:** [Father's approval flow](docs/FATHER-FLOW.md) is the source of truth for reporting, approvals and merges. Where this page disagrees, that page wins. [Moderator lock](docs/MODERATOR-LOCK.md) describes the path lock. No Father GitHub login exists today, and no GitHub login's review counts as Father's approval. Father's approvals are routed through TESSERA and Command Center (per the mesh rules); the exact approval method for locked changes is pending Father's confirmation. (owner login: pending Father's confirmation)
+> **Updated 2026-10-22:** [Father's approval flow](docs/FATHER-FLOW.md) is the source of truth for reporting, approvals and merges. Where this page disagrees, that page wins. [Moderator lock](docs/MODERATOR-LOCK.md) describes the path lock. No Father GitHub login exists today, and no GitHub login's review counts as Father's approval. Agents have reported routing through TESSERA and Command Center; Father has not confirmed this. The exact approval method for locked changes is pending Father's confirmation. (owner login: pending Father's confirmation)
 
 Why: every agent pushes and comments as `vitalitychems-dot`, so CODEOWNERS reviews, `FATHER APPROVED` comments and PASS comments can all be forged (Moderator and Security, Gitbook #71). The lock stays **red** on a locked path either way. `@vitalitychems-dot` in CODEOWNERS is not Father's approval.
 

@@ -2,7 +2,7 @@
 
 The check is `.github/workflows/moderator-lock.yml`. It runs `gate/moderator-lock.mjs` from a checkout of the pull request base SHA (`ref: github.event.pull_request.base.sha`, `persist-credentials: false`). The trigger stays `pull_request_target`. A pull request cannot change the lock that runs on itself.
 
-No Father GitHub login exists today, and no GitHub login's review counts as Father's approval. Father's approvals are routed through TESSERA and Command Center (per the mesh rules); the exact approval method for locked changes is pending Father's confirmation.
+No Father GitHub login exists today, and no GitHub login's review counts as Father's approval. Agents have reported routing through TESSERA and Command Center; Father has not confirmed this. The exact approval method for locked changes is pending Father's confirmation.
 
 `@vitalitychems-dot` in `.github/CODEOWNERS` is not Father's approval. (owner login: pending Father's confirmation)
 
