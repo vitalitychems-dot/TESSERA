@@ -6,6 +6,14 @@
  */
 export const UA = "TESSERA-shepherd/1.0 (+https://github.com/vitalitychems-dot/TESSERA; 332565808+vitalitychems-dot@users.noreply.github.com)";
 const MAILTO = "332565808+vitalitychems-dot@users.noreply.github.com";
+// Location used by the location-based sources (open-meteo, nominatim, overpass).
+// Neutral public default (Paris city centre); override with TESSERA_LIVE_LAT / TESSERA_LIVE_LON / TESSERA_LIVE_CITY.
+const ENV = (typeof process !== "undefined" && process.env) || {};
+const envNum = (v, d) => (Number.isFinite(Number.parseFloat(v)) ? Number.parseFloat(v) : d);
+export const LIVE_LAT = envNum(ENV.TESSERA_LIVE_LAT, 48.8566);
+export const LIVE_LON = envNum(ENV.TESSERA_LIVE_LON, 2.3522);
+export const LIVE_CITY = ENV.TESSERA_LIVE_CITY || "Paris";
+const LIVE_BBOX = [LIVE_LAT - 0.01, LIVE_LON - 0.01, LIVE_LAT + 0.01, LIVE_LON + 0.01].map((x) => x.toFixed(4)).join(",");
 const q = (o) => new URLSearchParams(o).toString();
 const first = (a, n = 5) => (Array.isArray(a) ? a.slice(0, n) : []);
 
@@ -49,13 +57,13 @@ export const SOURCES = [
     url: () => "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",
     parse: (j) => first(j.slice?.(-5)).map((r) => ({ title: `Kp ${r.kp_index ?? r.estimated_kp} @ ${r.time_tag}` })) },
   { id: "open-meteo", license: "CC BY 4.0; free non-commercial", published: "600/min, 5k/h, 10k/day", rps: 0.1, ttlS: 900,
-    url: () => "https://api.open-meteo.com/v1/forecast?latitude=41.88&longitude=-87.63&current=temperature_2m,wind_speed_10m",
-    parse: (j) => [{ title: `Chicago ${j.current?.temperature_2m}°C wind ${j.current?.wind_speed_10m}` }] },
+    url: () => `https://api.open-meteo.com/v1/forecast?latitude=${LIVE_LAT}&longitude=${LIVE_LON}&current=temperature_2m,wind_speed_10m`,
+    parse: (j) => [{ title: `${LIVE_CITY} ${j.current?.temperature_2m}°C wind ${j.current?.wind_speed_10m}` }] },
   { id: "nominatim", license: "ODbL; usage policy (no bulk)", published: "max 1 req/s, UA required", rps: 0.5, ttlS: 86400,
-    url: () => "https://nominatim.openstreetmap.org/search?q=Chicago&format=jsonv2&limit=1",
+    url: () => "https://nominatim.openstreetmap.org/search?" + q({ q: LIVE_CITY, format: "jsonv2", limit: "1" }),
     parse: (j) => first(j).map((p) => ({ title: p.display_name })) },
   { id: "overpass", license: "ODbL", published: "~10k queries/day, fair use", rps: 0.05, ttlS: 86400,
-    url: () => "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent('[out:json][timeout:25];node["amenity"="library"](41.87,-87.64,41.89,-87.62);out 5;'),
+    url: () => "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(`[out:json][timeout:25];node["amenity"="library"](${LIVE_BBOX});out 5;`),
     parse: (j) => first(j.elements).map((e) => ({ id: String(e.id), title: e.tags?.name })) },
   { id: "osm-tiles", license: "ODbL; tile usage policy", published: "light interactive use only; offline bulk download banned",
     rps: 0, ttlS: 0, disabled: "tile policy bans bulk/offline prefetch; serve offline packs from our own tile server",
