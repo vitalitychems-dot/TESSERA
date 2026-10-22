@@ -1,4 +1,4 @@
-# Owner: Father only. Mirrors gate/locked-paths.txt. Agents cannot approve changes here (see SETUP-FATHER.md: agents must not hold this account's token).
+# Owner handle: @vitalitychems-dot (shared agent account). A review from it is not Father's approval.
 # @vitalitychems-dot is not Father's approval. (owner login: pending Father's confirmation)
 /.github/ @vitalitychems-dot
 /CODEOWNERS @vitalitychems-dot
