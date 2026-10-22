@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#070b10" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'" />
+    <title>Tessera HUD · facet terrain</title>
+  </head>
+  <body>
+    <canvas id="terrain"></canvas>
+    <aside id="hud" aria-live="polite">
+      <h1>TESSERA · FACET TERRAIN</h1>
+      <dl>
+        <dt>link</dt><dd id="hud-link">connecting</dd>
+        <dt>folder</dt><dd id="hud-dir">-</dd>
+        <dt>tiles</dt><dd id="hud-tiles">0</dd>
+        <dt>bytes</dt><dd id="hud-bytes">0</dd>
+        <dt>add / chg / del</dt><dd id="hud-counts">0 / 0 / 0</dd>
+        <dt>last event</dt><dd id="hud-last">none yet</dd>
+        <dt>file</dt><dd id="hud-file">-</dd>
+      </dl>
+    </aside>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
