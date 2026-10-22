@@ -7,7 +7,7 @@ Scores a solver plugin on fchollet/ARC-AGI data/evaluation (pinned commit):
 See PREREGISTRATION.md for the fixed rules. Writes evals/arc_agi/results/<UTC timestamp>/.
 """
 import argparse, hashlib, importlib.util, io, json, multiprocessing as mp, os, platform, random
-import subprocess, sys, time, urllib.request, zipfile
+import signal, subprocess, sys, time, urllib.request, zipfile
 from datetime import datetime, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -15,6 +15,15 @@ ARC_REPO = "fchollet/ARC-AGI"
 ARC_SHA = "399030444e0ab0cc8b4e199870fb20b863846f34"
 EXPECTED_TASKS, EXPECTED_TESTS = 400, 419
 MAX_ATTEMPTS = 2
+# Full digest already recorded in RESULTS.md and the baseline summary.json.
+PINNED_DATASET_SHA256 = "4d9a15441fd20199f4fb419641ead13aaef357695abcc7e0ea243e3548a16dfb"
+NON_DICT_RESULT = "solver returned a non-dict result"
+# Whole repository. A pathspec of "." only saw evals/arc_agi.
+GIT_STATUS_ARGV = ["git", "status", "--porcelain"]
+
+
+class TaskTimeout(BaseException):
+    """SIGALRM deadline. BaseException so a solver `except Exception` cannot swallow it."""
 
 
 def fetch_dataset(cache):
@@ -56,17 +65,102 @@ def _init(path):
     _SOLVER = load_solver(path)
 
 
+def empty_attempts(n):
+    return [{"attempts": [], "confidence": 0.0, "meta": {}} for _ in range(n)]
+
+
+def check_dataset_hash(digest):
+    """Exit non-zero unless digest is the pinned evaluation sha256."""
+    if digest != PINNED_DATASET_SHA256:
+        sys.exit(f"dataset sha256 mismatch: got {digest}, expected {PINNED_DATASET_SHA256}")
+
+
+def coerce_solver_result(res, n):
+    """Same failure record as a crashed solver when the result is not a list of dicts."""
+    if isinstance(res, list) and all(isinstance(item, dict) for item in res):
+        return res, None
+    return empty_attempts(n), NON_DICT_RESULT
+
+
+def _timeout_message(limit):
+    return f"timeout: task exceeded {limit}s"
+
+
+def repo_is_dirty(run=None):
+    """True when git status reports any change in the repository, not one directory."""
+    run = run or subprocess.run
+    try:
+        proc = run(GIT_STATUS_ARGV, cwd=HERE, capture_output=True, text=True, timeout=10)
+    except Exception:
+        return False
+    if getattr(proc, "returncode", 0) not in (0, None):
+        return False
+    return bool((getattr(proc, "stdout", "") or "").strip())
+
+
 def _run_task(args):
     tid, task, limit, cfg = args
     train = [(p["input"], p["output"]) for p in task["train"]]
     tests = [p["input"] for p in task["test"]]
+    n = len(tests)
     t0 = time.monotonic()
+    if limit is not None and limit <= 0:
+        return tid, empty_attempts(n), 0.0, _timeout_message(limit)[:200]
+    res, err = empty_attempts(n), None
+    finished = False
+    armed = False
+    previous = None
+
+    def _on_alarm(signum, frame):
+        raise TaskTimeout(_timeout_message(limit))
+
     try:
-        res = _SOLVER.solve(train, tests, limit, cfg)
-        err = None
+        if hasattr(signal, "setitimer") and hasattr(signal, "SIGALRM"):
+            previous = signal.signal(signal.SIGALRM, _on_alarm)
+            signal.setitimer(signal.ITIMER_REAL, float(limit))
+            armed = True
+        raw = _SOLVER.solve(train, tests, limit, cfg)
+        finished = True
+        res, err = coerce_solver_result(raw, n)
+    except TaskTimeout as exc:
+        if not finished:
+            res, err = empty_attempts(n), str(exc)[:200]
     except Exception as e:  # a crash scores as no attempts
-        res, err = [{"attempts": [], "confidence": 0.0, "meta": {}} for _ in tests], repr(e)[:200]
+        res, err = empty_attempts(n), repr(e)[:200]
+    finally:
+        if armed:
+            # Drop a signal already queued at the deadline so it cannot kill a
+            # worker that has a result, or replace that result from `finally`.
+            try:
+                signal.signal(signal.SIGALRM, signal.SIG_IGN)
+                signal.setitimer(signal.ITIMER_REAL, 0)
+            except TaskTimeout:
+                pass
+            signal.signal(signal.SIGALRM, previous)
     return tid, res, round(time.monotonic() - t0, 3), err
+
+
+def score_finished_task(task, res, secs, err):
+    """Score one task. A non-dict solver payload becomes an empty failure, not a crash."""
+    n = len(task["test"])
+    if not isinstance(res, list) or any(not isinstance(item, dict) for item in res):
+        res = empty_attempts(n)
+        if not err:
+            err = NON_DICT_RESULT
+    rows = []
+    for i, t in enumerate(task["test"]):
+        r = res[i] if i < len(res) and isinstance(res[i], dict) else empty_attempts(1)[0]
+        att = (r.get("attempts") or [])[:MAX_ATTEMPTS]
+        ok = any(x == t["output"] for x in att)
+        rows.append({"test_index": i, "correct": ok, "n_attempts": len(att),
+                     "confidence": r.get("confidence", 0.0), "meta": r.get("meta", {})})
+    return {"tests": rows, "solved": all(x["correct"] for x in rows), "seconds": secs, "error": err}
+
+
+def write_summary(path, summary):
+    with open(path, "w") as f:
+        json.dump(summary, f, indent=2)
+        f.write("\n")
 
 
 def env_info(cmd):
@@ -87,7 +181,7 @@ def env_info(cmd):
         npv = None
     return {"command": cmd, "python": sys.version.split()[0], "packages": {"numpy": npv},
             "platform": platform.platform(), "cpu": cpu, "cpu_count": os.cpu_count(),
-            "git_commit": sh("git", "rev-parse", "HEAD"), "git_dirty": bool(sh("git", "status", "--porcelain", "--", ".")),
+            "git_commit": sh("git", "rev-parse", "HEAD"), "git_dirty": repo_is_dirty(),
             "dataset": {"repo": ARC_REPO, "commit": ARC_SHA, "split": "data/evaluation"}}
 
 
@@ -110,6 +204,7 @@ def main():
     n_tests = sum(len(t["test"]) for t in tasks.values())
     if (len(tasks), n_tests) != (EXPECTED_TASKS, EXPECTED_TESTS):
         sys.exit(f"dataset count mismatch: {len(tasks)} tasks / {n_tests} tests")
+    check_dataset_hash(ds_hash)
     ids = sorted(tasks)
     random.Random(a.seed).shuffle(ids)
     if a.subset:
@@ -139,16 +234,12 @@ def main():
             hit_cap = True
             break
         task = tasks[tid]
-        rows = []
-        for i, t in enumerate(task["test"]):
-            r = res[i] if i < len(res) else {"attempts": [], "confidence": 0.0, "meta": {}}
-            att = (r.get("attempts") or [])[:MAX_ATTEMPTS]
-            ok = any(x == t["output"] for x in att)
-            rows.append({"test_index": i, "correct": ok, "n_attempts": len(att),
-                         "confidence": r.get("confidence", 0.0), "meta": r.get("meta", {})})
-            conf_log.write(json.dumps({"task": tid, "test_index": i, "confidence": r.get("confidence", 0.0),
-                                       "n_attempts": len(att), "correct": ok, "seconds": secs}) + "\n")
-        done[tid] = {"tests": rows, "solved": all(x["correct"] for x in rows), "seconds": secs, "error": err}
+        rec = score_finished_task(task, res, secs, err)
+        for row in rec["tests"]:
+            conf_log.write(json.dumps({"task": tid, "test_index": row["test_index"],
+                                       "confidence": row["confidence"], "n_attempts": row["n_attempts"],
+                                       "correct": row["correct"], "seconds": secs}) + "\n")
+        done[tid] = rec
     pool.terminate()
     conf_log.close()
     wall = round(time.monotonic() - t_start, 1)
@@ -183,7 +274,7 @@ def main():
         "solved_task_ids": sorted(t for t, d in done.items() if d["solved"]),
         "environment": env, "utc_timestamp": stamp,
     }
-    json.dump(summary, open(os.path.join(out, "summary.json"), "w"), indent=2)
+    write_summary(os.path.join(out, "summary.json"), summary)
     json.dump(done, open(os.path.join(out, "tasks.json"), "w"))
     print(json.dumps({k: summary[k] for k in ("predictions_correct", "predictions_denominator", "tasks_solved",
                                                "tasks_denominator", "tasks_finished", "hit_total_time_cap", "wall_seconds")}))
