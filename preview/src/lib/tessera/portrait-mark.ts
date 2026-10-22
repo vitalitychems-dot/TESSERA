@@ -1,9 +1,9 @@
 /** The portrait is a public mark, not a key. Anyone who can see the file can compute the same hash. */
 
 import { createHash } from "node:crypto";
+import { PORTRAIT_MARK, PORTRAIT_PATH } from "./portrait-id.ts";
 
-export const PORTRAIT_PATH = "public/tessera/portrait-lg.jpg";
-export const PORTRAIT_MARK = "5e5ceb8757585061dd253490f82742391e77f3c394d89983831b10b00f65b596";
+export { PORTRAIT_MARK, PORTRAIT_PATH };
 
 export function portraitMark(bytes: Uint8Array) {
   return createHash("sha256").update(bytes).digest("hex");
