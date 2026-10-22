@@ -49,7 +49,7 @@ The worker picks the oldest `needs-agent` issue that has `file:` and `test:` lin
 6. ✅ Policy is read from the base ref, so a PR can't edit its own judge.
 7. ✅ The issue marker dedupes findings into one issue each, which is auto-closed when fixed. No agent triage tokens.
 8. ✅ Heartbeat file for the dead man's switch.
-9. ✅ Scores are stored on an orphan branch (`gate-scores`) with the last 90 snapshots kept; main history stays clean.
+9. ✅ Scores are stored on an orphan branch (`gate-scores`) with the last 90 snapshots kept; main history stays clean. History grows by one commit per run; only the snapshot files are pruned.
 10. ☐ Path filters (`paths:`) per workspace package. Not built: ci.yml is a required check, and path-filtered required checks stay "pending". Do it with a `changes` job plus a skip-success job (Build's lane, item 2).
 11. ☐ Skip docs-only PRs: same caveat; use a `dorny/paths-filter`-style job output rather than `paths-ignore`.
 12. ☐ Renovate (free GitHub App): better grouping and automerge-off scheduling than Dependabot. Needs Father to install the app.

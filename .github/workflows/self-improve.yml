@@ -68,4 +68,5 @@ jobs:
           gh label create needs-agent --color B60205 --description "Self-improve finding; agents spend tokens only here" 2>/dev/null || true
           node scripts/loop/findings.mjs findings.json scores.json
       - name: Record scores + heartbeat on gate-scores
+        if: github.ref == 'refs/heads/main'
         run: bash scripts/loop/record-scores.sh

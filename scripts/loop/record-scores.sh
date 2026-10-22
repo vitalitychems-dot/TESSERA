@@ -10,6 +10,7 @@ remote="${SCORE_REMOTE:-origin}"
 branch="${SCORE_BRANCH:-gate-scores}"
 sha="${GITHUB_SHA:?GITHUB_SHA is required}"
 short="${sha:0:8}"
+new_snapshot=""
 
 git config user.name vitalitychems-dot
 git config user.email 332565808+vitalitychems-dot@users.noreply.github.com
@@ -32,10 +33,19 @@ prune_snapshots() {
   local path
   shopt -s nullglob
   for path in scores/2*.json; do
+    if [[ "$path" == "$new_snapshot" ]]; then
+      continue
+    fi
     files+=("$path")
   done
   shopt -u nullglob
-  if ((${#files[@]} <= keep)); then
+  # The snapshot just written stays. Older files, including ones dated in the
+  # future, can fill at most keep-1 places.
+  local room="$keep"
+  if [[ -n "$new_snapshot" && "$keep" -gt 0 ]]; then
+    room=$((keep - 1))
+  fi
+  if ((${#files[@]} <= room)); then
     return 0
   fi
   local sorted=()
@@ -43,7 +53,7 @@ prune_snapshots() {
   while IFS= read -r line; do
     sorted+=("$line")
   done < <(printf '%s\n' "${files[@]}" | sort)
-  local drop=$((${#sorted[@]} - keep))
+  local drop=$((${#sorted[@]} - room))
   # scores/ is outside the scripts/loop cone until materialize_scores. git rm
   # then deletes the worktree file, so git add cannot stage it again.
   # --ignore-unmatch covers only a path that is not in the index.
@@ -53,7 +63,8 @@ prune_snapshots() {
 write_scores() {
   mkdir -p scores
   cp "$stage/scores.json" scores/latest.json
-  cp "$stage/scores.json" "scores/$(date -u +%Y%m%dT%H%M)-${short}.json"
+  new_snapshot="scores/$(date -u +%Y%m%dT%H%M)-${short}.json"
+  cp "$stage/scores.json" "$new_snapshot"
   jq -n --arg sha "$sha" --arg at "$(date -u +%FT%TZ)" --slurpfile f "$stage/findings.json" \
     '{sha:$sha, at:$at, findings:($f[0]|length)}' > scores/heartbeat.json
   prune_snapshots
@@ -93,6 +104,11 @@ push_head() {
   git push "$remote" "HEAD:refs/heads/${branch}"
 }
 
+fail_push() {
+  printf 'gate-scores push failed\n%s\n' "$push_out" >&2
+  exit "$push_status"
+}
+
 if remote_has_branch; then
   on_tip
 else
@@ -105,10 +121,15 @@ push_status=$?
 set -e
 if [[ "$push_status" -ne 0 ]]; then
   if [[ "$push_out" != *non-fast-forward* && "$push_out" != *"[rejected]"* && "$push_out" != *"fetch first"* && "$push_out" != *"remote rejected"* ]]; then
-    printf 'gate-scores push failed\n' >&2
-    exit "$push_status"
+    fail_push
   fi
-  printf 'gate-scores push was not a fast-forward; refetching and retrying once\n' >&2
+  printf 'gate-scores push was not a fast-forward; refetching and retrying once\n%s\n' "$push_out" >&2
   on_tip
-  push_head
+  set +e
+  push_out="$(push_head 2>&1)"
+  push_status=$?
+  set -e
+  if [[ "$push_status" -ne 0 ]]; then
+    fail_push
+  fi
 fi
