@@ -1,15 +1,15 @@
 name: moderator-lock
-# Locked by CODEOWNERS. Policy + script are read from the BASE ref; the PR diff is data only.
+# Locked by CODEOWNERS. The lock script is still checked out from the base SHA below
+# (persist-credentials: false, read-only permissions). pull_request so this check reports
+# on the PR. pull_request_review dropped (Security #71 / #294).
 on:
-  # pull_request_target: policy + script are read from the trusted BASE ref (checkout below
-  # pins base.sha, persist-credentials:false, read-only perms). The PR head diff is data only,
-  # so a PR cannot rewrite its own lock. pull_request_review dropped (Security #71 / #294).
-  pull_request_target:
+  pull_request:
+    branches: [main]
     types: [opened, synchronize, reopened, edited, ready_for_review]
 permissions: {}
 concurrency:
-  group: moderator-lock-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   collect:
     runs-on: ubuntu-latest

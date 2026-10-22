@@ -9,14 +9,16 @@ on:
 permissions:
   contents: read
 
+# A newer push on the same pull request cancels the previous gate run.
+# refs/heads/main is not cancelled; this workflow does not run on push.
 concurrency:
-  group: pr-gates-${{ github.event.pull_request.number }}
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   diff-scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -38,7 +40,7 @@ jobs:
 
   author-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
