@@ -1,5 +1,5 @@
 name: self-improve
-# 0-token loop: score main, record scores on branch gate-scores, open/refresh one needs-agent issue per finding.
+# 0-token loop: score the dispatched ref. Compare, needs-agent issues, and gate-scores run only on main.
 # Writes gate-scores:scores/heartbeat.json. No workflow in this repo reads that file.
 on:
   workflow_dispatch:
@@ -44,6 +44,7 @@ jobs:
           retention-days: 7
   publish:
     needs: score
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -57,11 +58,13 @@ jobs:
         with:
           name: scores
       - name: Compare with last recorded scores
+        if: github.ref == 'refs/heads/main'
         run: |
           git fetch --depth 1 origin gate-scores 2>/dev/null && git show origin/gate-scores:scores/latest.json > prev.json 2>/dev/null || echo "no previous scores"
           node scripts/loop/scores.mjs compare prev.json scores.json > findings.json
           cat findings.json >> "$GITHUB_STEP_SUMMARY"
       - name: Open / refresh / close needs-agent issues
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
