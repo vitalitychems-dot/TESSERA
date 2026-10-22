@@ -72,10 +72,32 @@ function layout(nodes, edges) {
       force[b].z -= (dz / dist) * pull;
     }
     for (let i = 0; i < placed.length; i += 1) {
-      placed[i].x = (placed[i].x + force[i].x * 0.02) * 0.985;
-      placed[i].y = (placed[i].y + force[i].y * 0.02) * 0.985;
-      placed[i].z = (placed[i].z + force[i].z * 0.02) * 0.985;
+      placed[i].x += force[i].x * 0.02;
+      placed[i].y += force[i].y * 0.02;
+      placed[i].z += force[i].z * 0.02;
     }
+  }
+  let cx = 0;
+  let cy = 0;
+  let cz = 0;
+  for (const point of placed) {
+    cx += point.x;
+    cy += point.y;
+    cz += point.z;
+  }
+  const count = Math.max(placed.length, 1);
+  cx /= count;
+  cy /= count;
+  cz /= count;
+  let radius = 1;
+  for (const point of placed) {
+    radius = Math.max(radius, Math.hypot(point.x - cx, point.y - cy, point.z - cz));
+  }
+  const scale = 14 / radius;
+  for (const point of placed) {
+    point.x = (point.x - cx) * scale;
+    point.y = (point.y - cy) * scale;
+    point.z = (point.z - cz) * scale;
   }
   return new Map(placed.map((point) => [point.id, point]));
 }
@@ -145,8 +167,8 @@ export function mountBrainGraph() {
   scene.add(rig);
 
   const nodeMaterial = new Map();
-  const coreGeometry = new THREE.SphereGeometry(0.72, 20, 16);
-  const haloGeometry = new THREE.SphereGeometry(1.35, 20, 16);
+  const coreGeometry = new THREE.SphereGeometry(1.15, 24, 18);
+  const haloGeometry = new THREE.SphereGeometry(2.4, 24, 18);
   for (const node of data.nodes) {
     const point = positions.get(node.id);
     if (!point) continue;
@@ -186,7 +208,7 @@ export function mountBrainGraph() {
   let lastY = 0;
   let yaw = 0.4;
   let pitch = 0.25;
-  let distance = 38;
+  let distance = 32;
   let running = false;
   let frame = 0;
 
