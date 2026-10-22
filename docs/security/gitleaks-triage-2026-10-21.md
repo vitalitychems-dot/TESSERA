@@ -2,7 +2,7 @@
 
 Source: the `gitleaks` job of the Secret scan workflow, run 39682899501 (2026-10-21 17:01 CT, PR #524), which reported **250 findings**. The scan wrapper (`scripts/gitleaks-scan.mjs`) prints only `file:line rule-id`. Values were inspected locally by shape only (length, charset, decoded JWT header, and placeholder patterns). Masking keeps at most four characters of a value and then `****`. No full secret value appears in this file.
 
-No history was edited and nothing was rotated. The two proven fixture findings at `scripts/tessera-credential-guard.test.mjs:15` are ignored by commit fingerprints in the root `.gitleaksignore`. Every other finding stays flagged.
+No history was edited and nothing was rotated. The two proven fixture findings at `scripts/tessera-credential-guard.test.mjs:15` are ignored by commit fingerprints in the root `.gitleaksignore`. The 248 `opened/` findings are ignored by commit fingerprints in that same file (masked inspection in #534: 0 likely-live). That ignore does not reclass them.
 
 ## Key finding: none of the 250 findings are on `main`
 
@@ -11,7 +11,7 @@ No history was edited and nothing was rotated. The two proven fixture findings a
 - 248 are on the seven archive branches `opened/01-XL1` … `opened/07-tesseract-consolidated` (the same findings repeated once per archived project copy).
 - 2 are in `scripts/tessera-credential-guard.test.mjs:15` on `security/session-cookie-hardening-20261020` (`1a6a43f4a2f673c1834b9d2e851379ee30ff1ae1`) and `manus/session-cookie-hardening-20261017` (`b69b9b782e1419eec4b9d909b7dc45839b7b0c33`). These two are also the only findings in the last `main` push run (39557493998, 2 findings). They are the ignored fixture below.
 
-So every PR fails Secret scan because of branches it never touches. See suggestion 1 below.
+Before those fingerprints, every PR failed Secret scan because of branches it never touches. See suggestion 1 below. On this branch the 248 `opened/` findings are ignored by fingerprint, not by a path exclusion.
 
 ## Summary
 
@@ -23,7 +23,7 @@ So every PR fails Secret scan because of branches it never touches. See suggesti
 | ignored via .gitleaksignore | 2 |
 | **Total** | **250** |
 
-Remaining flagged after the .gitleaksignore entries: **248** (likely-live 0, likely-fixture 8, unknown 240).
+Scanner findings after this branch's `.gitleaksignore` fingerprints: **0**. The class counts above are the original triage (likely-live 0, likely-fixture 8, unknown 240). The 248 `opened/` rows stay in those classes; they are ignored, not reclassed.
 
 | Rule | Class | Count |
 | --- | --- | ---: |
@@ -37,8 +37,7 @@ Remaining flagged after the .gitleaksignore entries: **248** (likely-live 0, lik
 | Class | Rule | Pattern | Count |
 | --- | --- | --- | ---: |
 | unknown | `generic-api-key` | secretLanguageId app label (`ciph****`) | 210 |
-| unknown | `generic-api-key` | public Solana token mint address `FMB4****` (TSRT) | 21 |
-| unknown | `generic-api-key` | .env.example template: public Solana RPC URL + public token mint address | 7 |
+| unknown | `generic-api-key` | public Solana token mint address `FMB4****` (TSRT), one value across 5 `.ts` files | 28 |
 | likely-fixture | `jwt` | "Token Forgery" attack payload: alg=none, empty signature | 7 |
 | unknown | `generic-api-key` | prose listing free public data sources (`Jupi****`) | 2 |
 | ignored via .gitleaksignore | `generic-api-key` | credential-guard unit-test fixture at line 15 (labeled assignment, value length 34) | 2 |
@@ -48,8 +47,8 @@ Remaining flagged after the .gitleaksignore entries: **248** (likely-live 0, lik
 
 **None (0).** No finding was classed as a live credential.
 
-- `secretLanguageId` values are short lowercase `ciph****` labels (16–19 chars) in an app data file. They are not proven fixtures, so they stay **unknown**.
-- `FMB4****` is a 44-char base58 Solana token mint address (TSRT). It is public on-chain data, and `LIMN_TOKEN_CA` in the `.env.example` template is the same address. Public data stays **unknown**.
+- `secretLanguageId` values are short lowercase `ciph****` labels (16–30 chars) in an app data file. They are not proven fixtures, so they stay **unknown**.
+- `FMB4****` is one 44-char base58 Solana token mint address (TSRT), the same value in 5 `.ts` files under `opened/`. None of those files is `.env.example`. Public data stays **unknown**.
 - The 7 JWTs decode to header `alg: none` with one `role` claim and an empty signature. They are forged-token attack payloads in a security tester, classed **likely-fixture**.
 - The benchmark sample `sk-a****` is a const sample in `honest-benchmark.ts`, classed **likely-fixture**.
 - The line-15 credential-guard strings are the proven fixture and are **ignored** by `.gitleaksignore` commit fingerprints. Other strings in that test file were not part of this 250 and are not ignored.
@@ -64,9 +63,9 @@ Recommended action: no rotation. Nothing was removed. If a later scan turns up a
 
 Gitleaks 8.30.1 does not read a `fingerprints` key on `[[allowlists]]`. Unknown keys are dropped, so that key does nothing. A `paths` entry for `scripts/tessera-credential-guard.test.mjs` would ignore every finding in the file, so that block is not in `.gitleaks.toml`. The two findings are ignored by commit fingerprints in the root `.gitleaksignore` (`commit:file:rule:line` only, not the 3-part global form). `scripts/gitleaks-scan.mjs` does not pass a flag that disables `.gitleaksignore`. Gitleaks 8.30.1 loads `<source>/.gitleaksignore` by default, and the Secret scan workflow runs that script with no extra ignore flags. The fixture value is not copied into the config or the ignore file.
 
-## Findings still flagged
+## Original triage rows
 
-Each remaining finding is one row. Class is `likely-live`, `likely-fixture`, or `unknown`.
+Each `opened/` finding is one row. On this branch these rows are ignored by commit fingerprint. Class is `likely-live`, `likely-fixture`, or `unknown`.
 
 | Class | Rule | File | Line |
 | --- | --- | --- | --- |
@@ -333,7 +332,7 @@ regexTarget = "line"
 regexes = ['''"secretLanguageId":\s*"''']
 
 [[allowlists]]
-description = "Public Solana TSRT mint address in archived prose, code and .env.example templates under opened/"
+description = "Public Solana TSRT mint address in archived TypeScript under opened/ (one value across five .ts files; none is .env.example)"
 targetRules = ["generic-api-key"]
 paths = ['''^opened/''']
 regexTarget = "line"
