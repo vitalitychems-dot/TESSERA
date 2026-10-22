@@ -1,5 +1,5 @@
 name: meta-loop
-# Measures the loop itself weekly and proposes its own tuning as an issue (the recursive part).
+# Measures the loop itself on manual dispatch and proposes its own tuning as an issue (the recursive part).
 on:
   workflow_dispatch:
 permissions: {}

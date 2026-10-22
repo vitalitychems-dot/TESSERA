@@ -2,20 +2,22 @@
 
 | Piece | File | Tokens | Default |
 |---|---|---|---|
-| Daily scorer + issue opener | `.github/workflows/self-improve.yml`, `scripts/loop/scores.mjs`, `findings.mjs` | 0 | on (cron 09:17 UTC) |
-| Weekly meta-loop (measures the loop, proposes tuning) | `.github/workflows/meta-loop.yml`, `scripts/loop/meta.mjs` | 0 | on (Mon 10:41 UTC) |
+| Scorer + issue opener | `.github/workflows/self-improve.yml`, `scripts/loop/scores.mjs`, `findings.mjs` | 0 | manual dispatch only |
+| Meta-loop (measures the loop, proposes tuning) | `.github/workflows/meta-loop.yml`, `scripts/loop/meta.mjs` | 0 | manual dispatch only |
 | In-runner worker (local open model) | `.github/workflows/worker.yml`, `scripts/loop/worker.mjs` | 0 paid | **off** (`TESSERA_WORKER=0`) |
 | Mesh runners | `scripts/loop/runner-select.mjs` | 0 | **off** (`TESSERA_MESH_RUNNERS=0`) |
 | Moderator lock | `.github/workflows/moderator-lock.yml`, `gate/` | 0 | on, fails closed |
 | Dependency bumps | `.github/dependabot.yml` | 0 | on (weekly, capped) |
 
-Agents spend tokens **only** when an open `needs-agent` issue exists. `gate-scores:scores/heartbeat.json` is the input for the dead man's switch (`deadman.yml` belongs to another lane). Scores come from the real test log and bench output in the runner, never from agent-written files.
+self-improve and meta-loop are manual dispatch only. Provenance (`.github/workflows/main-provenance.yml`) still runs daily at 06:00 UTC. A self-improve dispatch from another ref still scores. Compare, needs-agent issue writes, and the gate-scores record run only when `github.ref` is `refs/heads/main`.
+
+Agents spend tokens **only** when an open `needs-agent` issue exists. `self-improve` writes `gate-scores:scores/heartbeat.json`. Scores come from the real test log and bench output in the runner, never from agent-written files.
 
 ## Loop
 1. `self-improve` runs `pnpm test` and the bench 5 times, then takes the median p50.
-2. It compares against `gate-scores:scores/latest.json`. A finding is a failing test, a drop in the pass count, a bench p50 more than `BENCH_TOLERANCE` (default 10%) **and** more than 0.02 ms worse, a bench path that disappeared, or a broken scorer (fail closed).
-3. Each finding gets one issue, keyed by a hidden marker: created, refreshed or auto-closed when fixed.
-4. `meta-loop` reads all `needs-agent` issues weekly (opened, fixed, median hours to fix, `tokens-used:` per fix) and opens or refreshes a `loop-tuning` issue with proposals. That issue is how the loop tunes itself.
+2. On main, it compares against `gate-scores:scores/latest.json`. A finding is a failing test, a drop in the pass count, a bench p50 more than `BENCH_TOLERANCE` (default 10%) **and** more than 0.02 ms worse, a bench path that disappeared, or a broken scorer (fail closed).
+3. On main, each finding gets one issue, keyed by a hidden marker: created, refreshed or auto-closed when fixed.
+4. `meta-loop`, on manual dispatch, reads all `needs-agent` issues (opened, fixed, median hours to fix, `tokens-used:` per fix) and opens or refreshes a `loop-tuning` issue with proposals. That issue is how the loop tunes itself.
 
 ## Worker
 The worker picks the oldest `needs-agent` issue that has `file:` and `test:` lines, then:
@@ -47,7 +49,7 @@ The worker picks the oldest `needs-agent` issue that has `file:` and `test:` lin
 6. ✅ Policy is read from the base ref, so a PR can't edit its own judge.
 7. ✅ The issue marker dedupes findings into one issue each, which is auto-closed when fixed. No agent triage tokens.
 8. ✅ Heartbeat file for the dead man's switch.
-9. ✅ Scores are stored on an orphan branch (`gate-scores`) with the last 90 snapshots kept; main history stays clean.
+9. ✅ Scores are stored on an orphan branch (`gate-scores`) with the last 90 snapshots kept; main history stays clean. History grows by one commit per main run; only the snapshot files are pruned.
 10. ☐ Path filters (`paths:`) per workspace package. Not built: ci.yml is a required check, and path-filtered required checks stay "pending". Do it with a `changes` job plus a skip-success job (Build's lane, item 2).
 11. ☐ Skip docs-only PRs: same caveat; use a `dorny/paths-filter`-style job output rather than `paths-ignore`.
 12. ☐ Renovate (free GitHub App): better grouping and automerge-off scheduling than Dependabot. Needs Father to install the app.
