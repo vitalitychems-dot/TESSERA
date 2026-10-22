@@ -15,3 +15,4 @@ python3 evals/arc_agi/run.py --solver path/to/solver.py --config '{"depth": 3}'
   `solvers/dsl_search.py`.
 - Output: `results/<UTC timestamp>/summary.json` (scores, config, environment, command;
   committed), `tasks.json` and `confidence.jsonl` (per task / per test; gitignored).
+- `dsl_search_v2` is default-off: FAIL vs prereg (20/400 = baseline). See [RESULTS-v2.md](RESULTS-v2.md).
