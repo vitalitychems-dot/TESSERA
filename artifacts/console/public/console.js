@@ -4,6 +4,7 @@ const state = {
   tab: "eye",
   eye: null,
   brain: null,
+  brainSnapshot: document.documentElement.dataset.brainSnapshot === "1",
   bus: null,
   score: null,
   selected: null,
@@ -11,6 +12,8 @@ const state = {
   chat: [],
   chatError: "",
 };
+
+let brainView = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -40,7 +43,11 @@ function paint(next = state) {
     if (tab) tab.setAttribute("aria-current", on ? "true" : "false");
   }
   paintEye(next);
-  paintBrain(next);
+  if (next.brainSnapshot) {
+    if (brainView) brainView.sync(next.tab === "brain");
+  } else {
+    paintBrain(next);
+  }
   paintChat(next);
   paintBus(next);
   paintScore(next);
@@ -263,6 +270,11 @@ $("chat-form").addEventListener("submit", (event) => {
   event.preventDefault();
   void HANDLERS["chat-send"](state, io);
 });
+
+if (state.brainSnapshot) {
+  const mod = await import("./brain-graph.mjs");
+  brainView = mod.mountBrainGraph();
+}
 
 const meta = await fetchJson("/api/meta");
 $("port-label").textContent = meta.listen;

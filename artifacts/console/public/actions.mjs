@@ -21,6 +21,10 @@ export const HANDLERS = {
   },
   async "tab-brain"(state, io) {
     state.tab = "brain";
+    if (state.brainSnapshot) {
+      io.paint(state);
+      return;
+    }
     const t = state.brain?.t;
     state.brain = await io.fetchJson(t == null ? "/api/brain" : `/api/brain?t=${t}`);
     io.paint(state);
