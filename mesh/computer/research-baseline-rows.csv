@@ -1,0 +1,37 @@
+pr,source,url,first_pass_accepted(y/n),fix_reason
+storage#17@9f3f0953,rea,https://api.github.com/repos/morluto/rea,y,
+storage#17@9f3f0953,api-anything,https://api.github.com/repos/goodnight000/api-anything,y,
+storage#17@9f3f0953,heretic,https://api.github.com/repos/p-e-w/heretic,y,
+storage#17@9f3f0953,openhands,https://api.github.com/repos/All-Hands-AI/OpenHands,n,paraphrased purpose (GitHub description not quoted verbatim)
+storage#17@9f3f0953,dify,https://api.github.com/repos/langgenius/dify,y,
+storage#17@9f3f0953,openmanus,https://api.github.com/repos/FoundationAgents/OpenManus,n,paraphrased purpose (GitHub description not quoted verbatim)
+storage#17@9f3f0953,glm-thudm,https://api.github.com/repos/THUDM/GLM,y,
+storage#17@9f3f0953,chatglm-6b,https://api.github.com/repos/THUDM/ChatGLM-6B,n,paraphrased purpose (GitHub description not quoted verbatim)
+storage#17@9f3f0953,chatglm2-6b,https://api.github.com/repos/zai-org/ChatGLM2-6B,n,paraphrased purpose (GitHub description not quoted verbatim)
+storage#17@9f3f0953,chatglm3,https://api.github.com/repos/zai-org/ChatGLM3,n,paraphrased purpose (GitHub description not quoted verbatim)
+storage#17@9f3f0953,glm-130b,https://api.github.com/repos/THUDM/GLM-130B,y,
+storage#17@9f3f0953,glm-4,https://api.github.com/repos/THUDM/GLM-4,n,paraphrased purpose (GitHub description not quoted verbatim)
+storage#17@9f3f0953,glm-4.5,https://api.github.com/repos/zai-org/GLM-4.5,y,
+storage#17@9f3f0953,glm-5,https://api.github.com/repos/zai-org/GLM-5,y,
+storage#17@9f3f0953,gods-eye-view,https://api.github.com/repos/bilawalsidhu/gods-eye-view,y,
+storage#17@9f3f0953,camofox-browser,https://api.github.com/repos/jo-inc/camofox-browser,y,
+storage#17@9f3f0953,brain2qwerty,https://api.github.com/repos/facebookresearch/brain2qwerty,n,"paraphrased purpose (GitHub description not quoted verbatim); NC reuse label (needed 'study only, noncommercial')"
+storage#17@9f3f0953,monty,https://api.github.com/repos/thousandbrainsproject/tbp.monty,y,
+storage#17@9f3f0953,soar,https://api.github.com/repos/SoarGroup/Soar,y,
+storage#17@9f3f0953,act-r,https://api.github.com/repos/asmaloney/ACT-R,y,
+storage#17@9f3f0953,nengo,https://api.github.com/repos/nengo/nengo,y,
+storage#17@9f3f0953,nest,https://api.github.com/repos/nest/nest-simulator,y,
+storage#17@9f3f0953,brian2,https://api.github.com/repos/brian-team/brian2,n,paraphrased purpose (GitHub description not quoted verbatim)
+storage#17@9f3f0953,lida,https://api.github.com/search/repositories?q=LIDA+Franklin+cognitive+architecture+in:description,y,
+storage#17@9f3f0953,nupic-legacy,https://api.github.com/repos/numenta/nupic,y,
+storage#17@9f3f0953,htm-core,https://api.github.com/repos/htm-community/htm.core,n,paraphrased purpose (GitHub description not quoted verbatim)
+storage#17@9f3f0953,microns,https://www.microns-explorer.org/cortical-mm3,y,
+storage#17@9f3f0953,flywire,https://flywire.ai/guidelines,n,"NC reuse label (needed 'study only, noncommercial')"
+storage#17@9f3f0953,allen-brain-atlas,https://brain-map.org/,n,"NC reuse label (needed 'study only, noncommercial')"
+storage#17@9f3f0953,allen-cell-types,https://brain-map.org/our-research/cell-types-taxonomies,n,"NC reuse label (needed 'study only, noncommercial')"
+storage#17@9f3f0953,hcp-young-adult,https://www.humanconnectome.org/study/hcp-young-adult/data-use-terms,y,
+storage#17@9f3f0953,openneuro,https://github.com/OpenNeuroOrg/openneuro/blob/master/README.md,y,
+storage#17@9f3f0953,dandi,https://api.dandiarchive.org/api/info/,y,
+storage#26@d8f19462,hcp-dua-terms,https://www.humanconnectome.org/study/hcp-young-adult/document/wu-minn-hcp-consortium-open-access-data-use-terms,n,paraphrased WU-Minn terms plus missing IRB term
+storage#26@d8f19462,hcp-citations,https://www.humanconnectome.org/study/hcp-young-adult/document/hcp-citations,y,
+storage#26@d8f19462,hcp-acknowledgement,http://www.humanconnectome.org/about/acknowledgehcp.html,y,
