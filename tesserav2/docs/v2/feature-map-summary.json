@@ -1,0 +1,51 @@
+{
+  "generatedFrom": "V2-FEATURE-MAP.csv (planner snapshot 2026-10-12)",
+  "memoryPointer": "docs/v2/v2-memory.jsonl",
+  "memoryRecords": 467,
+  "memoryTypes": {
+    "entity": 192,
+    "relation": 275
+  },
+  "featureMapRows": 318,
+  "malformedRows": 0,
+  "byInclude": {
+    "n": 225,
+    "excluded": 48,
+    "y": 45
+  },
+  "byCategory": {
+    "docs:n": 16,
+    "misc:n": 82,
+    "excluded:excluded": 43,
+    "browser-fingerprint:excluded": 3,
+    "tessera-core:n": 87,
+    "commerce:excluded": 2,
+    "offline-mesh:y": 2,
+    "ui:n": 8,
+    "security-protocols:n": 5,
+    "agents-studio:n": 4,
+    "adapters:n": 4,
+    "knowledge-memory:n": 1,
+    "misc:y": 19,
+    "adapters:y": 9,
+    "security-protocols:y": 4,
+    "web-fetch:n": 4,
+    "compute-sandbox:y": 1,
+    "learning:n": 4,
+    "testing:n": 2,
+    "token-efficiency:n": 1,
+    "web-fetch:y": 1,
+    "learning:y": 1,
+    "search-index:n": 2,
+    "llm-runtime:n": 3,
+    "testing:y": 1,
+    "comms:n": 1,
+    "token-efficiency:y": 1,
+    "auth:n": 1,
+    "tessera-core:y": 2,
+    "docs:y": 1,
+    "ui:y": 1,
+    "agents-studio:y": 1,
+    "knowledge-memory:y": 1
+  }
+}
