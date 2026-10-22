@@ -1,0 +1,112 @@
+# ==============================================================================
+# ROLE IDENTIFICATION: Local simulation scaffold for the TESSERA monorepo.
+# No web scraping, no remote quantum execution, and no automatic git commits
+# to main. Manual only (workflow_dispatch) until a ledger step exists. When
+# run, it commits ledger files on mesh-sync/ledger and opens a draft pull request.
+# ==============================================================================
+name: Tessera Sovereign Mesh Synchronizer
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync-mesh-ledger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.13.0'
+
+      - name: Validate mesh ledger integrity
+        run: |
+          set -euo pipefail
+          hw=scripts/tessera-bio-hardware.mjs
+          qb=scripts/quantum_bridge.py
+          self=deliverables/pending-workflows/tessera-mesh-sync.yml
+
+          node --check "$hw"
+          python3 -m py_compile "$qb"
+          git check-ignore -q mesh/crystal_matrix
+
+          if grep -E -q 'execSync\(|setInterval\(|appendFileSync\(|git add |git commit |git push ' "$hw"; then
+            echo "hardware script must not shell out, poll, or write the live feed"
+            exit 1
+          fi
+          grep -q "execFileSync('ollama'" "$hw"
+          grep -q "readFileSync(filePath" "$hw"
+          grep -q "input: prompt" "$hw"
+          if grep -E -q "execFileSync\('ollama', \[[^]]*prompt" "$hw"; then
+            echo "ollama file contents must be passed on stdin, not argv"
+            exit 1
+          fi
+
+          if grep -E -q 'IBM_QUANTUM|LIVE_CLOUD|FEED\.write_text' "$qb"; then
+            echo "quantum bridge must stay a local simulation and must not write the live feed"
+            exit 1
+          fi
+          grep -q 'local simulation' "$qb"
+
+          if grep -E -q 'git (push|pull).*main|git add \.' "$self"; then
+            echo "workflow must not stage the whole tree or push main"
+            exit 1
+          fi
+          python3 -c 'from pathlib import Path; import sys; needles=("live internet "+"scraping","reverse-engineers "+"open-source"); files=["scripts/tessera-bio-hardware.mjs","scripts/quantum_bridge.py","deliverables/pending-workflows/tessera-mesh-sync.yml",".grokrules"]; bad=[p for p in files for n in needles if n in Path(p).read_text()]; sys.exit(1 if bad else 0)'
+
+          while IFS= read -r mesh_json; do
+            [ -n "$mesh_json" ] || continue
+            python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$mesh_json"
+          done < <(git ls-files 'mesh/**/*.json')
+
+      - name: Commit ledger changes on a branch and open a draft PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BRANCH=mesh-sync/ledger
+          git config user.name "tessera-mesh-agent"
+          git config user.email "mesh-agent@tessera.local"
+          git fetch origin main
+          git fetch origin "$BRANCH" || true
+
+          if git rev-parse --verify "origin/${BRANCH}" >/dev/null 2>&1; then
+            git checkout -B "$BRANCH" "origin/${BRANCH}"
+          else
+            git checkout -B "$BRANCH" origin/main
+          fi
+
+          git add -- mesh
+          git reset -q -- mesh/drops/live_feed.md || true
+          if git diff --cached --quiet; then
+            echo "No ledger changes to publish."
+            exit 0
+          fi
+
+          git commit -m "sync: mesh ledger update
+
+          Original-Author: Computer
+          Co-authored-by: Computer <332565808+vitalitychems-dot@users.noreply.github.com>"
+
+          dest="$BRANCH"
+          case "$dest" in
+            main|refs/heads/main)
+              echo "refusing to publish ${dest}"
+              exit 1
+              ;;
+          esac
+          git push origin "HEAD:${dest}"
+
+          existing="$(gh pr list --head "$dest" --base main --state open --json number --jq '.[0].number')"
+          if [ -z "$existing" ]; then
+            gh pr create --draft --base main --head "$dest" \
+              --title "sync: mesh ledger" \
+              --body "Automatic ledger update from the mesh synchronizer. Draft only."
+          fi
