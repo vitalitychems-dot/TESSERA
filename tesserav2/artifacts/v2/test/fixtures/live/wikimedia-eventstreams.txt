@@ -1,0 +1,5 @@
+data: {"id": 2079231681, "wiki": "enwiki", "title": "Michael Klueh"}
+data: {"id": 69835102, "wiki": "srwiki", "title": "\u041d\u0430\u0440\u043e\u0434\u043d\u043e\u043e\u0441\u043b\u043e\u0431\u043e\u0434\u0438\u043b\u0430\u0447\u043a\u0430 \u0431\u043e\u0440\u0431\u0430 \u0410\u043b\u0431\u0430\u043d\u0438\u0458\u0435"}
+data: {"id": 3497920983, "wiki": "commonswiki", "title": "File:Jedna z knih Knihovny Latinsk\u00e9 \u0161koly v J\u00e1chymov\u011b.jpg"}
+data: {"id": 204247927, "wiki": "zhwiki", "title": "\u516b\u5366\u638c"}
+data: {"id": 2079231682, "wiki": "enwiki", "title": "Wikipedia:Version 1.0 Editorial Team/Olympics articles by quality log"}

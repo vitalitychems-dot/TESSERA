@@ -1,0 +1,19 @@
+{
+  "name": "@workspace/v2",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "check": "node src/check-protocol.mjs",
+    "studio": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/studio/serve.mjs",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test --test-reporter=spec test/*.test.mjs",
+    "eval:reasoning": "node eval/reasoning/run.mjs"
+  },
+  "dependencies": {
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.64.0"
+  }
+}
