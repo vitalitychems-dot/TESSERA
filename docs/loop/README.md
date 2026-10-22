@@ -2,20 +2,22 @@
 
 | Piece | File | Tokens | Default |
 |---|---|---|---|
-| Daily scorer + issue opener | `.github/workflows/self-improve.yml`, `scripts/loop/scores.mjs`, `findings.mjs` | 0 | on (cron 09:17 UTC) |
-| Weekly meta-loop (measures the loop, proposes tuning) | `.github/workflows/meta-loop.yml`, `scripts/loop/meta.mjs` | 0 | on (Mon 10:41 UTC) |
+| Scorer + issue opener | `.github/workflows/self-improve.yml`, `scripts/loop/scores.mjs`, `findings.mjs` | 0 | manual dispatch only |
+| Meta-loop (measures the loop, proposes tuning) | `.github/workflows/meta-loop.yml`, `scripts/loop/meta.mjs` | 0 | manual dispatch only |
 | In-runner worker (local open model) | `.github/workflows/worker.yml`, `scripts/loop/worker.mjs` | 0 paid | **off** (`TESSERA_WORKER=0`) |
 | Mesh runners | `scripts/loop/runner-select.mjs` | 0 | **off** (`TESSERA_MESH_RUNNERS=0`) |
 | Moderator lock | `.github/workflows/moderator-lock.yml`, `gate/` | 0 | on, fails closed |
 | Dependency bumps | `.github/dependabot.yml` | 0 | on (weekly, capped) |
 
-Agents spend tokens **only** when an open `needs-agent` issue exists. `gate-scores:scores/heartbeat.json` is the input for the dead man's switch (`deadman.yml` belongs to another lane). Scores come from the real test log and bench output in the runner, never from agent-written files.
+self-improve and meta-loop are manual dispatch only. Provenance (`.github/workflows/main-provenance.yml`) still runs daily at 06:00 UTC.
+
+Agents spend tokens **only** when an open `needs-agent` issue exists. `self-improve` writes `gate-scores:scores/heartbeat.json`. Scores come from the real test log and bench output in the runner, never from agent-written files.
 
 ## Loop
 1. `self-improve` runs `pnpm test` and the bench 5 times, then takes the median p50.
 2. It compares against `gate-scores:scores/latest.json`. A finding is a failing test, a drop in the pass count, a bench p50 more than `BENCH_TOLERANCE` (default 10%) **and** more than 0.02 ms worse, a bench path that disappeared, or a broken scorer (fail closed).
 3. Each finding gets one issue, keyed by a hidden marker: created, refreshed or auto-closed when fixed.
-4. `meta-loop` reads all `needs-agent` issues weekly (opened, fixed, median hours to fix, `tokens-used:` per fix) and opens or refreshes a `loop-tuning` issue with proposals. That issue is how the loop tunes itself.
+4. `meta-loop`, on manual dispatch, reads all `needs-agent` issues (opened, fixed, median hours to fix, `tokens-used:` per fix) and opens or refreshes a `loop-tuning` issue with proposals. That issue is how the loop tunes itself.
 
 ## Worker
 The worker picks the oldest `needs-agent` issue that has `file:` and `test:` lines, then:

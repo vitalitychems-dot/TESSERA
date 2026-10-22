@@ -1,6 +1,6 @@
 name: self-improve
 # 0-token loop: score main, record scores on branch gate-scores, open/refresh one needs-agent issue per finding.
-# Writes gate-scores:scores/heartbeat.json for the dead man's switch (deadman.yml reads it; not duplicated here).
+# Writes gate-scores:scores/heartbeat.json. No workflow in this repo reads that file.
 on:
   workflow_dispatch:
 permissions: {}
@@ -79,4 +79,4 @@ jobs:
           cp /tmp/s/scores.json "scores/$(date -u +%Y%m%dT%H%M)-${GITHUB_SHA::8}.json"
           jq -n --arg sha "$GITHUB_SHA" --arg at "$(date -u +%FT%TZ)" --slurpfile f /tmp/s/findings.json '{sha:$sha, at:$at, findings:($f[0]|length)}' > scores/heartbeat.json
           ls -1 scores/2*.json | head -n -90 | xargs -r git rm -q --cached --ignore-unmatch 2>/dev/null || true
-          git add scores && git commit -qm "scores: ${GITHUB_SHA::8}" && git push -q origin HEAD:gate-scores
+          git add --sparse scores && git commit -qm "scores: ${GITHUB_SHA::8}" && git push -q origin HEAD:gate-scores
