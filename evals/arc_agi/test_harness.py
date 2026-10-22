@@ -25,8 +25,10 @@ class HashPinTests(unittest.TestCase):
     def test_pinned_hash_is_the_full_repo_value(self):
         self.assertTrue(run.PINNED_DATASET_SHA256.startswith("4d9a1544"))
         self.assertEqual(len(run.PINNED_DATASET_SHA256), 64)
-        results = open(os.path.join(HERE, "RESULTS.md"), encoding="utf-8").read()
-        summary = open(os.path.join(HERE, "results", "20261021T220320Z", "summary.json"), encoding="utf-8").read()
+        with open(os.path.join(HERE, "RESULTS.md"), encoding="utf-8") as handle:
+            results = handle.read()
+        with open(os.path.join(HERE, "results", "20261021T220320Z", "summary.json"), encoding="utf-8") as handle:
+            summary = handle.read()
         self.assertIn(run.PINNED_DATASET_SHA256, results)
         self.assertIn(run.PINNED_DATASET_SHA256, summary)
 
@@ -132,7 +134,8 @@ class NonDictResultTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "summary.json")
             run.write_summary(path, {"error": rec["error"], "tasks_solved": 0, "predictions_correct": 0})
-            raw = open(path, "rb").read()
+            with open(path, "rb") as handle:
+                raw = handle.read()
             self.assertTrue(raw.endswith(b"\n"))
             loaded = json.loads(raw)
             self.assertEqual(loaded["tasks_solved"], 0)
@@ -149,7 +152,8 @@ class NitTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "summary.json")
             run.write_summary(path, {"predictions_correct": 23, "tasks_solved": 20})
-            raw = open(path, "rb").read()
+            with open(path, "rb") as handle:
+                raw = handle.read()
             self.assertTrue(raw.endswith(b"\n"))
             self.assertFalse(raw.endswith(b"\n\n"))
             self.assertEqual(json.loads(raw), {"predictions_correct": 23, "tasks_solved": 20})
