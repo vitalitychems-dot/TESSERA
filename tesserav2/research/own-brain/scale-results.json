@@ -1,0 +1,83 @@
+{
+  "program": "TESSERA own-brain Phase 1/2 local simulator",
+  "python": "3.12.3",
+  "platform": "linux",
+  "memory_cap_bytes": 1073741824,
+  "results": [
+    {
+      "rung": "S0",
+      "synapses": 10000,
+      "neurons": 1000,
+      "seed": 20261009,
+      "estimated_bytes": 712000,
+      "memory_cap_bytes": 1073741824,
+      "status": "TESTED",
+      "elapsed_seconds": 0.02472,
+      "spikes": 540,
+      "throughput_synapses_per_second": 3236186.65,
+      "peak_rss_bytes": 19124224,
+      "trace_sha256": "19bb7d2086696842c3885b81255e974d5469ac6ca531260c16983a361bbaf865",
+      "deterministic_replay": true
+    },
+    {
+      "rung": "S1",
+      "synapses": 100000,
+      "neurons": 10000,
+      "seed": 20261009,
+      "estimated_bytes": 7120000,
+      "memory_cap_bytes": 1073741824,
+      "status": "TESTED",
+      "elapsed_seconds": 0.238449,
+      "spikes": 5302,
+      "throughput_synapses_per_second": 3355009.74,
+      "peak_rss_bytes": 28278784,
+      "trace_sha256": "5483661c4950657893aa625dc9012b90720723419cb6da36bf29f3e95dea2d3e",
+      "deterministic_replay": true
+    },
+    {
+      "rung": "S2",
+      "synapses": 1000000,
+      "neurons": 10000,
+      "seed": 20261009,
+      "estimated_bytes": 61120000,
+      "memory_cap_bytes": 1073741824,
+      "status": "TESTED",
+      "elapsed_seconds": 1.940429,
+      "spikes": 5778,
+      "throughput_synapses_per_second": 4122800.69,
+      "peak_rss_bytes": 78303232,
+      "trace_sha256": "105fd1b54f1f8987e560235b513a996144b15f8d31e2270a49ef132215e6c27f",
+      "deterministic_replay": true
+    },
+    {
+      "rung": "S3",
+      "synapses": 10000000,
+      "neurons": 10000,
+      "seed": 20261009,
+      "estimated_bytes": 601120000,
+      "memory_cap_bytes": 1073741824,
+      "status": "TESTED",
+      "elapsed_seconds": 18.889419,
+      "spikes": 6897,
+      "throughput_synapses_per_second": 4235175.34,
+      "peak_rss_bytes": 576499712,
+      "trace_sha256": "c3df66907156a247396492c3b0a62148f8a4196234f02c6ff6dc00ce3e47cdfe",
+      "deterministic_replay": true
+    },
+    {
+      "rung": "S4",
+      "synapses": 100000000,
+      "neurons": 10000,
+      "seed": 20261009,
+      "estimated_bytes": 6001120000,
+      "memory_cap_bytes": 1073741824,
+      "status": "BLOCKED",
+      "reason": "estimated peak memory exceeds local safety cap"
+    }
+  ],
+  "limitations": [
+    "software simulator only; no biological hardware or CL1 interface",
+    "packed storage reduces overhead but the memory/time safety gate remains active",
+    "no learning rule or product-memory write is enabled in Phase 1"
+  ]
+}
