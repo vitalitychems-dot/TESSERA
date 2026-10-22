@@ -33,7 +33,7 @@ Labels: TESTED means checked directly in git. REPORTED means someone said it and
 
 - storage (private), branch `archive/tessera-persona-2026-10-22`, file `tessera-images/persona/06-5dcbaf5a.png`, blob `5dcbaf5a` (TESTED): https://github.com/vitalitychems-dot/storage/blob/archive/tessera-persona-2026-10-22/tessera-images/persona/06-5dcbaf5a.png. This file is not on storage `main`.
 - memory (private), `main`, file `drive/opened/01_XL1_older/bytes/5dcbaf5a110ff16f9de6c41578834280f15a9749.png`, blob `5dcbaf5a` (TESTED): https://github.com/vitalitychems-dot/memory/blob/main/drive/opened/01_XL1_older/bytes/5dcbaf5a110ff16f9de6c41578834280f15a9749.png
-- TESSERA (public), file `tessera-portrait-5dcbaf5a.png`, next to `IDENTITY.md`: https://github.com/vitalitychems-dot/TESSERA/blob/main/tessera-portrait-5dcbaf5a.png. It is live once branch `identity/tessera-portrait-2026-10-22` merges.
+- TESSERA (public), file `tessera-portrait-5dcbaf5a.png`, next to `IDENTITY.md`: https://github.com/vitalitychems-dot/TESSERA/blob/main/tessera-portrait-5dcbaf5a.png. It is live once TESSERA PR #584 merges.
 - tesserav2 (private), `main`, file `tessera-portrait-5dcbaf5a.png`, next to `IDENTITY.md`: https://github.com/vitalitychems-dot/tesserav2/blob/main/tessera-portrait-5dcbaf5a.png
 - XL1 Replit history (TESTED). The XL1 repo is in storage release `drive-export-nonv-2026-10-20`, asset `01_01_XL1.zip` (sha256 `8ff5e2e5c0178de3ac9bdc3fbcc5c4eafc55545da49a2a878da0890b0eaf3b42`):
   - `attached_assets/IMG_7175_1774439476179.png`: added in `ce7627cd` and deleted in `93fa72c8`.
