@@ -131,8 +131,8 @@ test("a repeated comments page stops instead of following itself", async () => {
   );
 });
 
-test("the workflow is pull_request only, pinned, and write is limited to the comment job", () => {
-  const text = readFileSync(fileURLToPath(new URL("../.github/workflows/pr-gates.yml", import.meta.url)), "utf8");
+test("ci workflow gates pull_request jobs, stays pinned, and limits write to the comment job", () => {
+  const text = readFileSync(fileURLToPath(new URL("../.github/workflows/ci.yml", import.meta.url)), "utf8");
   const source = [
     readFileSync(fileURLToPath(new URL("./pr-diff-scan.mjs", import.meta.url)), "utf8"),
     readFileSync(fileURLToPath(new URL("./pr-author-check.mjs", import.meta.url)), "utf8"),
@@ -141,13 +141,29 @@ test("the workflow is pull_request only, pinned, and write is limited to the com
   assert.equal(text.includes("pull_request_target"), false);
   assert.equal(text.includes("workflow_run"), false);
   assert.match(text, /on:\n {2}pull_request:\n {4}branches: \[main\]\n/);
-  assert.doesNotMatch(text, /\n {2}push:/);
+  assert.match(text, /\n {2}push:\n {4}branches: \[main\]\n/);
   assert.doesNotMatch(text, /schedule:/);
   assert.match(text, /DIFF_SCAN_ENFORCE: "0"/);
   assert.match(text, /needs: \[diff-scan, author-check\]/);
-  assert.match(text, /if: success\(\)/);
   assert.equal(text.split("pull-requests: write").length - 1, 1);
-  const ready = text.split("ready-for-gate:")[1];
+
+  function jobBlock(id) {
+    const marker = `\n  ${id}:\n`;
+    const start = text.indexOf(marker);
+    assert.notEqual(start, -1, id);
+    const from = start + marker.length;
+    const next = text.slice(from).search(/\n {2}[a-z0-9-]+:\n/);
+    return text.slice(start, next === -1 ? text.length : from + next);
+  }
+
+  for (const id of ["validate", "gitleaks"]) {
+    assert.doesNotMatch(jobBlock(id), /^ {4}if:/m, id);
+  }
+  for (const id of ["diff-scan", "author-check"]) {
+    assert.match(jobBlock(id), /^ {4}if: github\.event_name == 'pull_request'\n/m, id);
+  }
+  const ready = jobBlock("ready-for-gate");
+  assert.match(ready, /^ {4}if: github\.event_name == 'pull_request' && success\(\)\n/m);
   assert.match(ready, /contents: read\n {6}pull-requests: write/);
   assert.doesNotMatch(text, /contents: write/);
   assert.doesNotMatch(text, /\$\{\{\s*secrets\./);
