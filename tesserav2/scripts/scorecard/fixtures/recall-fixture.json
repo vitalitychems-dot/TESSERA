@@ -1,0 +1,181 @@
+{
+ "note": "Synthetic retrieval fixture for recall@k of lib/agi/hybrid-search.ts. Authored for the scorecard, not held-out; no private or personal data.",
+ "docs": [
+  {
+   "id": "d01",
+   "content": "agent bus publishes messages to subscribers by topic"
+  },
+  {
+   "id": "d02",
+   "content": "working memory stores recent hypotheses and contradictions"
+  },
+  {
+   "id": "d03",
+   "content": "hebbian links strengthen between memories retrieved together"
+  },
+  {
+   "id": "d04",
+   "content": "global workspace broadcasts the top candidate each cycle"
+  },
+  {
+   "id": "d05",
+   "content": "checkpoint and restore saves bus and working memory state"
+  },
+  {
+   "id": "d06",
+   "content": "goal planner decomposes stuck goals into sub-goals"
+  },
+  {
+   "id": "d07",
+   "content": "reflection loop scores memories by importance recency relevance"
+  },
+  {
+   "id": "d08",
+   "content": "metacognition detects stalls drift and hysteresis"
+  },
+  {
+   "id": "d09",
+   "content": "causal model records actions and their post states"
+  },
+  {
+   "id": "d10",
+   "content": "tiered memory moves items between core recall and archival tiers"
+  },
+  {
+   "id": "d11",
+   "content": "consensus engine schedules corrective proposals for review"
+  },
+  {
+   "id": "d12",
+   "content": "hybrid search fuses vector similarity with bm25 keyword ranking"
+  },
+  {
+   "id": "d13",
+   "content": "pgvector hnsw index speeds approximate nearest neighbour lookup"
+  },
+  {
+   "id": "d14",
+   "content": "memory writer chooses add update or delete instead of append"
+  },
+  {
+   "id": "d15",
+   "content": "decision history keeps valid from and valid to timestamps"
+  },
+  {
+   "id": "d16",
+   "content": "comms policy lists which agents may message which lanes"
+  },
+  {
+   "id": "d17",
+   "content": "scorecard compares base and head scores within a noise band"
+  },
+  {
+   "id": "d18",
+   "content": "held out evaluator runs predictions inside a bubblewrap sandbox"
+  },
+  {
+   "id": "d19",
+   "content": "sacred scheduler picks the next interval between cycles"
+  },
+  {
+   "id": "d20",
+   "content": "voxel world derives column height from memory node degree"
+  },
+  {
+   "id": "d21",
+   "content": "synapse decay weakens unused links over time"
+  },
+  {
+   "id": "d22",
+   "content": "intent decoder predicts the next goal from bus topics"
+  },
+  {
+   "id": "d23",
+   "content": "affect model estimates emotion labels on a fixed set"
+  },
+  {
+   "id": "d24",
+   "content": "sse stream pushes workspace winners to the ui in real time"
+  }
+ ],
+ "queries": [
+  {
+   "q": "which module broadcasts the winning candidate every cycle",
+   "relevant": [
+    "d04",
+    "d24"
+   ]
+  },
+  {
+   "q": "strengthen links between memories that are recalled together",
+   "relevant": [
+    "d03",
+    "d21"
+   ]
+  },
+  {
+   "q": "save and restore agent state after restart",
+   "relevant": [
+    "d05"
+   ]
+  },
+  {
+   "q": "combine keyword ranking with vector similarity",
+   "relevant": [
+    "d12",
+    "d13"
+   ]
+  },
+  {
+   "q": "rank memories by importance and recency",
+   "relevant": [
+    "d07"
+   ]
+  },
+  {
+   "q": "detect stalls and drift in the system",
+   "relevant": [
+    "d08"
+   ]
+  },
+  {
+   "q": "break a stuck goal into smaller goals",
+   "relevant": [
+    "d06",
+    "d22"
+   ]
+  },
+  {
+   "q": "who is allowed to message whom",
+   "relevant": [
+    "d16",
+    "d01"
+   ]
+  },
+  {
+   "q": "facts with valid from and valid to dates",
+   "relevant": [
+    "d15"
+   ]
+  },
+  {
+   "q": "run untrusted predictions in a sandbox",
+   "relevant": [
+    "d18"
+   ]
+  },
+  {
+   "q": "update or delete memories instead of only appending",
+   "relevant": [
+    "d14",
+    "d02"
+   ]
+  },
+  {
+   "q": "compare base and head scores",
+   "relevant": [
+    "d17"
+   ]
+  }
+ ]
+}
