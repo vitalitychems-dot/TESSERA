@@ -6,12 +6,10 @@ import { CouncilRoom } from "./council-room";
 import { BrainView } from "./brain-view";
 import { GitbookView } from "./gitbook-view";
 import { GitbookAiView } from "./gitbook-ai-view";
-import { LibraryView } from "./library-view";
 import { ThemeView, applyTheme, type ThemeId } from "./theme-view";
 import { RickView } from "./rick-view";
 import { RoomsSheet, ROOMS } from "./rooms-sheet";
 import { HouseLive } from "./house-live";
-import { WebView } from "./web-view";
 import { TesseraMark } from "./mark";
 import { TESSERA } from "@/lib/tessera/identity";
 import { SIGIL } from "@/lib/tessera/canon";
@@ -24,21 +22,23 @@ function settle(id: string): ViewId | "" {
 }
 
 const PRIMARY: { id: ViewId | "rooms"; label: string; icon: typeof MessageCircle }[] = [
-  { id: "world", label: "World", icon: Globe2 },
   { id: "chamber", label: "Talk", icon: MessageCircle },
-  { id: "council", label: "Council", icon: Scale },
   { id: "brain", label: "Brain", icon: Brain },
+  { id: "world", label: "World", icon: Globe2 },
+  { id: "council", label: "Council", icon: Scale },
   { id: "rooms", label: "Rooms", icon: LayoutGrid },
 ];
 
 export function AppShell() {
-  const [place, setPlace] = useState<ViewId>("world");
-  const [theme, setTheme] = useState<ThemeId>("house");
+  const [place, setPlace] = useState<ViewId>("chamber");
+  const [theme, setTheme] = useState<ThemeId>("water");
   const [sheet, setSheet] = useState(false);
 
   useEffect(() => {
-    const current = document.documentElement.dataset.theme;
-    if (current === "water" || current === "fire" || current === "lightning" || current === "diamond" || current === "spiral" || current === "house") setTheme(current);
+    const saved = window.localStorage.getItem("tessera-theme");
+    const current = saved || document.documentElement.dataset.theme;
+    if (current === "water" || current === "fire" || current === "lightning" || current === "diamond" || current === "spiral" || current === "house") setTheme(applyTheme(current));
+    else setTheme(applyTheme("water"));
   }, []);
 
   useEffect(() => {
@@ -103,8 +103,6 @@ export function AppShell() {
             {place === "theme" ? <ThemeView current={theme} choose={chooseTheme} /> : null}
             {place === "rick" ? <RickView /> : null}
             {place === "board" ? <BoardView /> : null}
-            {place === "library" ? <LibraryView open={open} /> : null}
-            {place === "web" ? <WebView /> : null}
           </div>
         )}
         {sheet ? <RoomsSheet current={place} open={open} close={() => setSheet(false)} /> : null}

@@ -1,5 +1,7 @@
 import { LiveTick } from "@/components/tessera/live-tick";
 import { MindChart } from "@/components/tessera/mind-chart";
+import { GodsEye } from "@/components/tessera/gods-eye";
+import { BAND } from "@/lib/tessera/band-185";
 import type { ViewId } from "@/lib/tessera/store";
 
 export function BrainView({ open }: { open: (id: ViewId) => void }) {
@@ -12,6 +14,9 @@ export function BrainView({ open }: { open: (id: ViewId) => void }) {
           <p className="mt-2 text-sm leading-relaxed text-muted">Live and memory were this same chart. They are not separate rooms now.</p>
         </div>
         <LiveTick />
+        <div className="h-[28rem] overflow-hidden border border-border">
+          <GodsEye rows={BAND} />
+        </div>
         <MindChart />
         <div className="grid grid-cols-3 gap-2">
           <button type="button" onClick={() => open("gitbook")} className="min-h-11 border border-border text-sm">
