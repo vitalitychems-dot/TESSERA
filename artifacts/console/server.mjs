@@ -56,7 +56,7 @@ export function applyBrainTab(html, snapshot, enabled) {
   if (!enabled) return html;
   const json = embedSnapshot(snapshot ?? {});
   const head = `<script type="importmap">{"imports":{"three":"/vendor/three/three.module.js"}}</script><style>${BRAIN_TAB_STYLE}</style>`;
-  const block = `<div id="brain-snapshot"><p id="brain-snapshot-label">${DISCLAIMER}</p><p id="brain-snapshot-counts"></p><div class="brain-stage"><canvas id="brain-snapshot-canvas" aria-label="Memory index snapshot"></canvas><aside id="brain-snapshot-aside"></aside></div></div><script type="application/json" id="brain-snapshot-data">${json}</script>`;
+  const block = `<div id="brain-snapshot"><p id="brain-snapshot-label">${DISCLAIMER}</p><p id="brain-snapshot-counts" title="Node recall-degree values add up to twice the header's recall-pair count."></p><div class="brain-stage"><canvas id="brain-snapshot-canvas" aria-label="Memory index snapshot"></canvas><aside id="brain-snapshot-aside"></aside></div></div><script type="application/json" id="brain-snapshot-data">${json}</script>`;
   return html.replace('<html lang="en">', '<html lang="en" data-brain-snapshot="1">').replace("</head>", `${head}</head>`).replace('<section data-panel="brain" id="panel-brain" hidden>', `<section data-panel="brain" id="panel-brain" hidden>${block}`);
 }
 

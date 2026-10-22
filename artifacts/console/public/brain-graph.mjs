@@ -62,10 +62,12 @@ export function mountBrainGraph() {
   const countsEl = document.getElementById("brain-snapshot-counts");
   if (countsEl) {
     const c = data.counts;
-    const parts = [`${c.nodes ?? 0} nodes`, `${c.edges ?? 0} edges`, `${c.links ?? 0} links`, `${c.recalls ?? 0} recalls`];
+    const pairs = c.recalls ?? 0;
+    const parts = [`${c.nodes ?? 0} nodes`, `${c.edges ?? 0} edges`, `${c.links ?? 0} links`, `${pairs} recall pair${pairs === 1 ? "" : "s"}`];
     if (data.sampleFixture) parts.push("Sample fixture.");
     if (data.source) parts.push(data.source);
     countsEl.textContent = parts.join(" · ");
+    countsEl.title = "Node recall-degree values add up to twice the header's recall-pair count.";
   }
   const canvas = document.getElementById("brain-snapshot-canvas");
   const aside = document.getElementById("brain-snapshot-aside");
@@ -98,15 +100,27 @@ export function mountBrainGraph() {
     scene.add(halo, core);
     cores.set(node.id, core);
   }
+  const pairKey = (edge) => (edge.source < edge.target ? `${edge.source}\0${edge.target}` : `${edge.target}\0${edge.source}`);
+  const linkPairs = new Set(data.edges.filter((edge) => edge.kind === "link").map(pairKey));
   for (const edge of data.edges) {
     const a = positions.get(edge.source), b = positions.get(edge.target);
     if (!a || !b) continue;
     const recall = edge.kind === "recall";
-    const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(a.x, a.y, a.z), new THREE.Vector3(b.x, b.y, b.z)]);
-    const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({
-      color: recall ? GLASS : FRACTURE, transparent: true, opacity: recall ? glow(edge.recalls, maxEdge) : 0.28,
-      blending: THREE.AdditiveBlending, depthWrite: false,
-    }));
+    const share = recall && linkPairs.has(pairKey(edge));
+    let ax = a.x, ay = a.y, az = a.z, bx = b.x, by = b.y, bz = b.z;
+    if (share) {
+      const dx = bx - ax, dy = by - ay, dz = bz - az;
+      let ox = -dy, oy = dx, oz = 0;
+      if (ox * ox + oy * oy < 1e-8) { ox = -dz; oy = 0; oz = dx; }
+      const s = 0.9 / (Math.hypot(ox, oy, oz) || 1);
+      ax += ox * s; ay += oy * s; az += oz * s; bx += ox * s; by += oy * s; bz += oz * s;
+    }
+    const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(ax, ay, az), new THREE.Vector3(bx, by, bz)]);
+    const material = share
+      ? new THREE.LineDashedMaterial({ color: GLASS, transparent: true, opacity: glow(edge.recalls, maxEdge), dashSize: 0.55, gapSize: 0.32, blending: THREE.AdditiveBlending, depthWrite: false })
+      : new THREE.LineBasicMaterial({ color: recall ? GLASS : FRACTURE, transparent: true, opacity: recall ? glow(edge.recalls, maxEdge) : 0.28, blending: THREE.AdditiveBlending, depthWrite: false });
+    const line = new THREE.Line(geometry, material);
+    if (share) line.computeLineDistances();
     line.raycast = () => {};
     scene.add(line);
   }
@@ -124,7 +138,7 @@ export function mountBrainGraph() {
       const button = document.createElement("button");
       button.type = "button";
       button.dataset.node = node.id;
-      button.textContent = `${node.id} · ${node.kind} · recalls ${node.recalls}`;
+      button.textContent = `${node.id} · ${node.kind} · recall degree ${node.recalls}`;
       button.addEventListener("click", () => mark(node.id));
       aside.append(button);
     }

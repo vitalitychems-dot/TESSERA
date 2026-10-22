@@ -12,6 +12,11 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 const pair = (a, b) => (a < b ? [a, b] : [b, a]);
 const facet = (entity) => entity.entityType.toLowerCase() === "facet" || entity.observations.some((line) => line.toLowerCase().startsWith("category:ui"));
 
+/**
+ * Recall matching is a case-insensitive substring match, so it can give false
+ * positives (e.g. "water" matches "underwater"). Mentions in both directions
+ * collapse into one edge.
+ */
 export function exportSnapshot(jsonl, { source = "" } = {}) {
   const entities = new Map();
   const links = new Map();
