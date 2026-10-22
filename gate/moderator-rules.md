@@ -22,7 +22,7 @@ Only Father edits this file. Tessera and the agents cannot. `gate/moderator-lock
 ## Identity (blocking flaw from #71)
 Every agent pushes as `vitalitychems-dot`. So:
 - A `FATHER APPROVED <sha>` **comment never counts**: any agent can post it.
-- No GitHub login's review counts as Father's approval for this lock, including vitalitychems-dot and collink1007. Agents have reported routing through TESSERA and Command Center; Father has not confirmed this. docs/FATHER-FLOW.md governs approval; the lock cannot see Father's own words, so it stays red on locked paths. The exact approval method for locked changes is pending Father's confirmation. See [docs/MODERATOR-LOCK.md](../docs/MODERATOR-LOCK.md).
+- No GitHub login's review counts as Father's approval for this lock, including vitalitychems-dot and collink1007. Father approves through TESSERA (Grok Bot); confirmed in his words to TESSERA on Oct 21, 2026, as relayed by TESSERA. docs/FATHER-FLOW.md governs approval; the lock cannot see Father's own words, so it stays red on locked paths. See [docs/MODERATOR-LOCK.md](../docs/MODERATOR-LOCK.md).
 - A gate PASS only counts as a **check run from the gate's own GitHub App** (repo variables `MODERATOR_APP_ID`, `SECURITY_APP_ID`, `BUILD_APP_ID`). PASS comments never count.
 - If a gate app id isn't configured, that gate's check **fails closed**. Repo variables `FATHERLOGIN` and `FATHER_LOGIN` are left in place and are not read.
 
