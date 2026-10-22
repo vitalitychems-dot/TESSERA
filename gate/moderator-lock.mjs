@@ -27,10 +27,32 @@ export function parseLockList(text) {
   return text.split("\n").map((l) => l.replace(/#.*/, "").trim()).filter(Boolean);
 }
 
+function namesOf(file) {
+  if (typeof file === "string") return file ? [file] : [];
+  if (!file || typeof file !== "object") return [];
+  const names = [];
+  if (typeof file.filename === "string" && file.filename) names.push(file.filename);
+  // GitHub rename payload. Matching only `filename` would miss a move out of a locked path.
+  if (typeof file.previous_filename === "string" && file.previous_filename) names.push(file.previous_filename);
+  return names;
+}
+
 export function lockedHits(files, patterns) {
   const res = patterns.map((p) => [p, globToRegExp(p)]);
-  return files.filter((f) => res.some(([, r]) => r.test(f.filename ?? f)))
-    .map((f) => f.filename ?? f);
+  const hits = [];
+  for (const file of files) {
+    for (const name of namesOf(file)) {
+      if (res.some(([, r]) => r.test(name))) hits.push(name);
+    }
+  }
+  return [...new Set(hits)];
+}
+
+function closed(reason) {
+  return {
+    lock: { pass: false, reasons: [reason], notes: [], lockedHits: [], lines: 0, files: 0 },
+    gates: { pass: false, reasons: [reason] },
+  };
 }
 
 const ENABLE_ON = /^\+.*TESSERA_ENABLE_[A-Z0-9_]+["']?\s*[:=]\s*["']?(1|true|on|yes)\b/im;
@@ -39,27 +61,30 @@ const SECRETISH = /^\+.*(ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A
 const FORBIDDEN_PATH = /(^|\/)(wallet|payment|crypto|mining|1t-vault|vault-1t)[^/]*(\/|$)/i;
 
 export function evaluate(input) {
+  if (input == null || typeof input !== "object" || Array.isArray(input)) {
+    return closed("malformed input -> fail closed");
+  }
+  if (!Array.isArray(input.files) || input.files.length === 0) {
+    return closed("null or empty files list -> fail closed");
+  }
+  const patterns = input.lockedPatterns;
+  if (!Array.isArray(patterns) || patterns.length === 0) {
+    return closed("null or empty locked patterns -> fail closed");
+  }
+  if (patterns.some((p) => typeof p !== "string" || p.trim() === "")) {
+    return closed("locked patterns contain a non-string or empty entry -> fail closed");
+  }
+
   const cfg = { maxLines: 400, maxFiles: 10, ...(input.config ?? {}) };
   const reasons = [];
   const notes = [];
-  const files = input.files ?? [];
-  const head = input.headSha;
-  const agentLogins = new Set((input.agentLogins ?? ["vitalitychems-dot"]).map((s) => s.toLowerCase()));
+  const files = input.files;
 
-  // Rule 1: locked paths. Only an unforgeable Father approval unlocks.
-  const hits = lockedHits(files, input.lockedPatterns ?? []);
+  // Rule 1: locked paths. No GitHub login's review unlocks them.
+  // Reviews and login allowlists are ignored on purpose.
+  const hits = lockedHits(files, patterns);
   if (hits.length) {
-    const father = (input.fatherLogin ?? "").toLowerCase();
-    if (!father) {
-      reasons.push(`locked paths touched (${hits.join(", ")}); FATHER_LOGIN not configured -> fail closed`);
-    } else if (agentLogins.has(father)) {
-      reasons.push(`locked paths touched (${hits.join(", ")}); FATHER_LOGIN '${father}' is also the agent account, so its reviews/comments can be forged -> fail closed`);
-    } else {
-      const ok = (input.reviews ?? []).some((r) =>
-        (r.user?.login ?? "").toLowerCase() === father && r.state === "APPROVED" && r.commit_id === head);
-      if (!ok) reasons.push(`locked paths touched (${hits.join(", ")}); no APPROVED review from ${father} on head ${head}`);
-      else notes.push(`locked paths approved by ${father} review on ${head}`);
-    }
+    reasons.push(`locked paths touched (${hits.join(", ")}); no GitHub login's review counts as Father's approval -> fail closed`);
     // Comments are never accepted: any agent can post "FATHER APPROVED <sha>" as the shared account.
     if ((input.comments ?? []).some((c) => /FATHER APPROVED/i.test(c.body ?? "")))
       notes.push("ignored 'FATHER APPROVED' comment(s): comments are forgeable by the shared account");
@@ -114,7 +139,12 @@ export function verifyGates(input, authors = new Set()) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const [mode = "lock", file] = process.argv.slice(2);
-  const input = JSON.parse(readFileSync(file, "utf8"));
+  let input = null;
+  try {
+    input = JSON.parse(readFileSync(file, "utf8"));
+  } catch {
+    input = null;
+  }
   const r = evaluate(input);
   const part = mode === "gates" ? r.gates : r.lock;
   console.log(JSON.stringify(part, null, 2));
