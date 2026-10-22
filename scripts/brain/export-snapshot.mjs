@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 export const DISCLAIMER = "Visualization of TESSERA's memory index (snapshot), not a model of her mind.";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const pair = (a, b) => (a < b ? [a, b] : [b, a]);
+const idOk = (value) => typeof value === "string" && value.length > 0 && !value.includes("\0");
 const facet = (entity) => entity.entityType.toLowerCase() === "facet" || entity.observations.some((line) => line.toLowerCase().startsWith("category:ui"));
 
 /**
@@ -25,12 +26,13 @@ export function exportSnapshot(jsonl, { source = "" } = {}) {
     if (!trimmed) continue;
     let row;
     try { row = JSON.parse(trimmed); } catch { continue; }
-    if (row.type === "entity" && typeof row.name === "string" && row.name) {
+    if (row === null || typeof row !== "object" || Array.isArray(row)) continue;
+    if (row.type === "entity" && idOk(row.name)) {
       entities.set(row.name, {
         entityType: typeof row.entityType === "string" ? row.entityType : "",
         observations: Array.isArray(row.observations) ? row.observations.filter((item) => typeof item === "string") : [],
       });
-    } else if (row.type === "relation" && row.from && row.to && row.from !== row.to) {
+    } else if (row.type === "relation" && idOk(row.from) && idOk(row.to) && row.from !== row.to) {
       for (const name of [row.from, row.to]) if (!entities.has(name)) entities.set(name, { entityType: "", observations: [] });
       const [left, right] = pair(row.from, row.to);
       links.set(`${left}\0${right}`, (links.get(`${left}\0${right}`) ?? 0) + 1);
@@ -65,7 +67,7 @@ export function exportSnapshot(jsonl, { source = "" } = {}) {
 
 export function repoRelative(filePath) {
   const relative = path.relative(repoRoot, path.resolve(filePath));
-  if (relative.startsWith("..") || path.isAbsolute(relative)) return path.resolve(filePath).split(path.sep).join("/");
+  if (relative.startsWith("..") || path.isAbsolute(relative)) return path.basename(filePath);
   return relative.split(path.sep).join("/");
 }
 
@@ -81,7 +83,14 @@ function parseArgs(argv) {
   let output = path.join(repoRoot, "artifacts/console/public/brain-snapshot.json");
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === "--input") input = path.resolve(argv[++i] ?? "");
-    else if (argv[i] === "--output") output = path.resolve(argv[++i] ?? "");
+    else if (argv[i] === "--output") {
+      const value = argv[++i];
+      if (!value) {
+        console.error("error: --output requires a path");
+        process.exit(1);
+      }
+      output = path.resolve(value);
+    }
   }
   return { input, output };
 }
@@ -129,5 +138,43 @@ if (process.env.NODE_TEST_CONTEXT) {
       assert.equal(written.counts.edges, 3);
       assert.equal(written.disclaimer, DISCLAIMER);
     } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+  test("null line is skipped", () => {
+    const snapshot = exportSnapshot('null\n{"type":"entity","name":"water","entityType":"facet","observations":[]}\n');
+    assert.deepEqual(snapshot.nodes.map((node) => node.id), ["water"]);
+  });
+  test("array line is skipped", () => {
+    const snapshot = exportSnapshot('[{"type":"entity","name":"water"}]\n');
+    assert.equal(snapshot.counts.nodes, 0);
+    assert.equal(snapshot.counts.edges, 0);
+  });
+  test("object from is rejected", () => {
+    const snapshot = exportSnapshot('{"type":"relation","from":{"id":"water"},"to":"cap_chamber_board_ui"}\n');
+    assert.equal(snapshot.counts.nodes, 0);
+    assert.equal(snapshot.counts.edges, 0);
+  });
+  test("id containing NUL is rejected", () => {
+    const snapshot = exportSnapshot('{"type":"entity","name":"bad\\u0000id","entityType":"card","observations":[]}\n{"type":"relation","from":"water\\u0000x","to":"cap_chamber_board_ui"}\n');
+    assert.equal(snapshot.counts.nodes, 0);
+    assert.equal(snapshot.counts.edges, 0);
+    assert.equal(JSON.stringify(snapshot).includes("\0"), false);
+  });
+  test("source outside the repo is the basename", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "brain-basename-"));
+    const input = path.join(dir, "local-memory.jsonl");
+    const output = path.join(dir, "out.json");
+    try {
+      writeFileSync(input, '{"type":"entity","name":"water","entityType":"facet","observations":[]}\n');
+      const snapshot = writeSnapshot(input, output);
+      assert.equal(snapshot.source, "local-memory.jsonl");
+      assert.equal(JSON.stringify(snapshot).includes(dir), false);
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+  test("bare --output exits nonzero", () => {
+    const env = { ...process.env };
+    delete env.NODE_TEST_CONTEXT;
+    const result = spawnSync(process.execPath, [path.join(here, "export-snapshot.mjs"), "--output"], { encoding: "utf8", env });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /--output requires a path/);
   });
 }
