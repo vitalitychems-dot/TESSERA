@@ -1,15 +1,10 @@
 import * as THREE from "three";
 
-const GLASS = 0x7ef0d4;
-const BONE = 0xf3efe6;
-const FRACTURE = 0xff5c39;
-const BG = 0x070b10;
+const GLASS = 0x7ef0d4, BONE = 0xf3efe6, FRACTURE = 0xff5c39;
 
 function readSnapshot() {
-  const node = document.getElementById("brain-snapshot-data");
-  if (!node) return { nodes: [], edges: [], counts: { nodes: 0, edges: 0, links: 0, recalls: 0 } };
   try {
-    const data = JSON.parse(node.textContent || "{}");
+    const data = JSON.parse(document.getElementById("brain-snapshot-data")?.textContent || "{}");
     return {
       disclaimer: typeof data.disclaimer === "string" ? data.disclaimer : "",
       source: typeof data.source === "string" ? data.source : "",
@@ -18,157 +13,76 @@ function readSnapshot() {
       edges: Array.isArray(data.edges) ? data.edges : [],
       counts: data.counts && typeof data.counts === "object" ? data.counts : {},
     };
-  } catch {
-    return { nodes: [], edges: [], counts: { nodes: 0, edges: 0, links: 0, recalls: 0 } };
-  }
+  } catch { return { nodes: [], edges: [], counts: {} }; }
 }
 
 function layout(nodes, edges) {
-  const placed = nodes.map((node, index) => {
-    const angle = (index / Math.max(nodes.length, 1)) * Math.PI * 2;
-    return {
-      id: node.id,
-      x: Math.cos(angle) * 16,
-      y: (index - (nodes.length - 1) / 2) * 3,
-      z: Math.sin(angle) * 16,
-    };
+  const n = Math.max(nodes.length, 1);
+  const placed = nodes.map((node, i) => ({
+    id: node.id,
+    x: Math.cos((i / n) * Math.PI * 2) * 16,
+    y: (i - (nodes.length - 1) / 2) * 3,
+    z: Math.sin((i / n) * Math.PI * 2) * 16,
+  }));
+  const at = new Map(placed.map((p, i) => [p.id, i]));
+  const springs = edges.flatMap((e) => {
+    const a = at.get(e.source), b = at.get(e.target);
+    return a == null || b == null ? [] : [[a, b]];
   });
-  const indexOf = new Map(placed.map((point, index) => [point.id, index]));
-  const springs = [];
-  for (const edge of edges) {
-    const a = indexOf.get(edge.source);
-    const b = indexOf.get(edge.target);
-    if (a == null || b == null) continue;
-    springs.push([a, b]);
-  }
-  for (let step = 0; step < 100; step += 1) {
+  for (let step = 0; step < 80; step += 1) {
     const force = placed.map(() => ({ x: 0, y: 0, z: 0 }));
-    for (let i = 0; i < placed.length; i += 1) {
-      for (let j = i + 1; j < placed.length; j += 1) {
-        const dx = placed[i].x - placed[j].x;
-        const dy = placed[i].y - placed[j].y;
-        const dz = placed[i].z - placed[j].z;
-        const dist2 = Math.max(dx * dx + dy * dy + dz * dz, 0.04);
-        const scale = 70 / (dist2 * Math.sqrt(dist2));
-        force[i].x += dx * scale;
-        force[i].y += dy * scale;
-        force[i].z += dz * scale;
-        force[j].x -= dx * scale;
-        force[j].y -= dy * scale;
-        force[j].z -= dz * scale;
-      }
+    for (let i = 0; i < placed.length; i += 1) for (let j = i + 1; j < placed.length; j += 1) {
+      const dx = placed[i].x - placed[j].x, dy = placed[i].y - placed[j].y, dz = placed[i].z - placed[j].z;
+      const scale = 70 / (Math.max(dx * dx + dy * dy + dz * dz, 0.04) ** 1.5);
+      force[i].x += dx * scale; force[i].y += dy * scale; force[i].z += dz * scale;
+      force[j].x -= dx * scale; force[j].y -= dy * scale; force[j].z -= dz * scale;
     }
     for (const [a, b] of springs) {
-      const dx = placed[b].x - placed[a].x;
-      const dy = placed[b].y - placed[a].y;
-      const dz = placed[b].z - placed[a].z;
-      const dist = Math.hypot(dx, dy, dz) || 1;
-      const pull = (dist - 14) * 0.045;
-      force[a].x += (dx / dist) * pull;
-      force[a].y += (dy / dist) * pull;
-      force[a].z += (dz / dist) * pull;
-      force[b].x -= (dx / dist) * pull;
-      force[b].y -= (dy / dist) * pull;
-      force[b].z -= (dz / dist) * pull;
+      const dx = placed[b].x - placed[a].x, dy = placed[b].y - placed[a].y, dz = placed[b].z - placed[a].z;
+      const dist = Math.hypot(dx, dy, dz) || 1, pull = (dist - 14) * 0.045, ux = dx / dist, uy = dy / dist, uz = dz / dist;
+      force[a].x += ux * pull; force[a].y += uy * pull; force[a].z += uz * pull;
+      force[b].x -= ux * pull; force[b].y -= uy * pull; force[b].z -= uz * pull;
     }
-    for (let i = 0; i < placed.length; i += 1) {
-      placed[i].x += force[i].x * 0.02;
-      placed[i].y += force[i].y * 0.02;
-      placed[i].z += force[i].z * 0.02;
-    }
+    for (const p of placed) { const f = force[at.get(p.id)]; p.x += f.x * 0.02; p.y += f.y * 0.02; p.z += f.z * 0.02; }
   }
-  let cx = 0;
-  let cy = 0;
-  let cz = 0;
-  for (const point of placed) {
-    cx += point.x;
-    cy += point.y;
-    cz += point.z;
-  }
-  const count = Math.max(placed.length, 1);
-  cx /= count;
-  cy /= count;
-  cz /= count;
-  let radius = 1;
-  for (const point of placed) {
-    radius = Math.max(radius, Math.hypot(point.x - cx, point.y - cy, point.z - cz));
-  }
-  const scale = 14 / radius;
-  for (const point of placed) {
-    point.x = (point.x - cx) * scale;
-    point.y = (point.y - cy) * scale;
-    point.z = (point.z - cz) * scale;
-  }
-  return new Map(placed.map((point) => [point.id, point]));
+  const c = placed.reduce((s, p) => ({ x: s.x + p.x, y: s.y + p.y, z: s.z + p.z }), { x: 0, y: 0, z: 0 });
+  c.x /= n; c.y /= n; c.z /= n;
+  const radius = placed.reduce((m, p) => Math.max(m, Math.hypot(p.x - c.x, p.y - c.y, p.z - c.z)), 1);
+  const fit = 14 / radius;
+  for (const p of placed) { p.x = (p.x - c.x) * fit; p.y = (p.y - c.y) * fit; p.z = (p.z - c.z) * fit; }
+  return new Map(placed.map((p) => [p.id, p]));
 }
 
-function glow(recalls, maxRecall) {
-  if (!maxRecall) return 0.22;
-  return 0.18 + 0.82 * (Number(recalls) / maxRecall);
-}
-
-function line(a, b, color, opacity) {
-  const geometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(a.x, a.y, a.z),
-    new THREE.Vector3(b.x, b.y, b.z),
-  ]);
-  const material = new THREE.LineBasicMaterial({
-    color,
-    transparent: true,
-    opacity,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-  });
-  const mesh = new THREE.Line(geometry, material);
-  mesh.raycast = () => {};
-  return mesh;
-}
+const glow = (recalls, maxRecall) => (maxRecall ? 0.18 + 0.82 * (Number(recalls) / maxRecall) : 0.22);
 
 export function mountBrainGraph() {
   const data = readSnapshot();
   const label = document.getElementById("brain-snapshot-label");
   if (label && data.disclaimer) label.textContent = data.disclaimer;
-  const counts = document.getElementById("brain-snapshot-counts");
-  if (counts) {
+  const countsEl = document.getElementById("brain-snapshot-counts");
+  if (countsEl) {
     const c = data.counts;
-    const parts = [
-      `${c.nodes ?? 0} nodes`,
-      `${c.edges ?? 0} edges`,
-      `${c.links ?? 0} links`,
-      `${c.recalls ?? 0} recalls`,
-    ];
+    const parts = [`${c.nodes ?? 0} nodes`, `${c.edges ?? 0} edges`, `${c.links ?? 0} links`, `${c.recalls ?? 0} recalls`];
     if (data.sampleFixture) parts.push("Sample fixture.");
     if (data.source) parts.push(data.source);
-    counts.textContent = parts.join(" · ");
+    countsEl.textContent = parts.join(" · ");
   }
-  const aside = document.getElementById("brain-snapshot-aside");
   const canvas = document.getElementById("brain-snapshot-canvas");
+  const aside = document.getElementById("brain-snapshot-aside");
   if (!canvas) return { sync() {} };
-
-  const positions = layout(data.nodes, data.edges);
-  const maxRecall = data.nodes.reduce((max, node) => Math.max(max, Number(node.recalls) || 0), 0);
-  const maxEdgeRecall = data.edges.reduce((max, edge) => Math.max(max, edge.kind === "recall" ? Number(edge.recalls) || 0 : 0), 0);
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
   let renderer;
-  try {
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, preserveDrawingBuffer: true });
-  } catch {
-    document.body.dataset.brainReady = "error";
-    if (counts) counts.textContent = `${counts.textContent} · WebGL unavailable`;
-    return { sync() {} };
-  }
-  renderer.setClearColor(BG, 1);
+  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, preserveDrawingBuffer: true }); }
+  catch { document.body.dataset.brainReady = "error"; return { sync() {} }; }
+  renderer.setClearColor(0x070b10, 1);
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(BG);
+  scene.background = new THREE.Color(0x070b10);
   const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 400);
-  camera.position.set(0, 10, 38);
-  const rig = new THREE.Group();
-  scene.add(rig);
-
-  const nodeMaterial = new Map();
-  const coreGeometry = new THREE.SphereGeometry(1.15, 24, 18);
-  const haloGeometry = new THREE.SphereGeometry(2.4, 24, 18);
+  const positions = layout(data.nodes, data.edges);
+  const maxRecall = data.nodes.reduce((m, node) => Math.max(m, Number(node.recalls) || 0), 0);
+  const maxEdge = data.edges.reduce((m, edge) => Math.max(m, edge.kind === "recall" ? Number(edge.recalls) || 0 : 0), 0);
+  const cores = new Map();
+  const coreGeometry = new THREE.SphereGeometry(1.15, 20, 16);
+  const haloGeometry = new THREE.SphereGeometry(2.4, 20, 16);
   for (const node of data.nodes) {
     const point = positions.get(node.id);
     if (!point) continue;
@@ -177,55 +91,33 @@ export function mountBrainGraph() {
     core.position.set(point.x, point.y, point.z);
     core.userData.id = node.id;
     const halo = new THREE.Mesh(haloGeometry, new THREE.MeshBasicMaterial({
-      color: node.kind === "facet" ? GLASS : BONE,
-      transparent: true,
-      opacity: glow(node.recalls, maxRecall),
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
+      color, transparent: true, opacity: glow(node.recalls, maxRecall), blending: THREE.AdditiveBlending, depthWrite: false,
     }));
     halo.position.copy(core.position);
     halo.raycast = () => {};
-    rig.add(halo, core);
-    nodeMaterial.set(node.id, core);
+    scene.add(halo, core);
+    cores.set(node.id, core);
   }
   for (const edge of data.edges) {
-    const a = positions.get(edge.source);
-    const b = positions.get(edge.target);
+    const a = positions.get(edge.source), b = positions.get(edge.target);
     if (!a || !b) continue;
-    if (edge.kind === "recall") {
-      rig.add(line(a, b, GLASS, glow(edge.recalls, maxEdgeRecall)));
-    } else {
-      rig.add(line(a, b, FRACTURE, 0.28));
-    }
+    const recall = edge.kind === "recall";
+    const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(a.x, a.y, a.z), new THREE.Vector3(b.x, b.y, b.z)]);
+    const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({
+      color: recall ? GLASS : FRACTURE, transparent: true, opacity: recall ? glow(edge.recalls, maxEdge) : 0.28,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    }));
+    line.raycast = () => {};
+    scene.add(line);
   }
-
-  const raycaster = new THREE.Raycaster();
-  const pointer = new THREE.Vector2();
-  let selected = "";
-  let dragging = false;
-  let moved = 0;
-  let lastX = 0;
-  let lastY = 0;
-  let yaw = 0.4;
-  let pitch = 0.25;
-  let distance = 32;
-  let running = false;
-  let frame = 0;
-
   function mark(id) {
-    selected = id;
-    for (const [nodeId, mesh] of nodeMaterial) {
+    for (const [nodeId, mesh] of cores) {
       const node = data.nodes.find((item) => item.id === nodeId);
-      const base = node?.kind === "facet" ? GLASS : BONE;
-      mesh.material.color.setHex(nodeId === id ? 0xffffff : base);
+      mesh.material.color.setHex(nodeId === id ? 0xffffff : node?.kind === "facet" ? GLASS : BONE);
       mesh.scale.setScalar(nodeId === id ? 1.35 : 1);
     }
-    if (!aside) return;
-    for (const button of aside.querySelectorAll("button")) {
-      button.setAttribute("aria-current", button.dataset.node === id ? "true" : "false");
-    }
+    aside?.querySelectorAll("button").forEach((button) => button.setAttribute("aria-current", button.dataset.node === id ? "true" : "false"));
   }
-
   if (aside) {
     aside.replaceChildren();
     for (const node of data.nodes) {
@@ -237,47 +129,32 @@ export function mountBrainGraph() {
       aside.append(button);
     }
   }
-
-  function resize() {
-    const width = canvas.clientWidth || 900;
-    const height = canvas.clientHeight || 640;
+  const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2();
+  let dragging = false, moved = 0, lastX = 0, lastY = 0, yaw = 0.4, pitch = 0.25, distance = 32, running = false, frame = 0;
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const resize = () => {
+    const width = canvas.clientWidth || 900, height = canvas.clientHeight || 640;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(width, height, false);
     camera.aspect = width / Math.max(height, 1);
     camera.updateProjectionMatrix();
-  }
-
-  function placeCamera() {
+  };
+  const render = () => {
+    resize();
+    if (!reduceMotion && running) yaw += 0.003;
     const cos = Math.cos(pitch);
     camera.position.set(Math.sin(yaw) * cos * distance, Math.sin(pitch) * distance, Math.cos(yaw) * cos * distance);
     camera.lookAt(0, 0, 0);
-  }
-
-  function render() {
-    resize();
-    if (!reduceMotion && running) yaw += 0.003;
-    placeCamera();
     renderer.render(scene, camera);
-    if (canvas.width > 0 && !document.body.dataset.brainReady) document.body.dataset.brainReady = "1";
+    if (canvas.width > 0) document.body.dataset.brainReady = "1";
     if (running) frame = requestAnimationFrame(render);
-  }
-
-  canvas.addEventListener("pointerdown", (event) => {
-    dragging = true;
-    moved = 0;
-    lastX = event.clientX;
-    lastY = event.clientY;
-    canvas.setPointerCapture(event.pointerId);
-  });
+  };
+  canvas.addEventListener("pointerdown", (event) => { dragging = true; moved = 0; lastX = event.clientX; lastY = event.clientY; canvas.setPointerCapture(event.pointerId); });
   canvas.addEventListener("pointermove", (event) => {
     if (!dragging) return;
-    const dx = event.clientX - lastX;
-    const dy = event.clientY - lastY;
-    moved += Math.abs(dx) + Math.abs(dy);
-    lastX = event.clientX;
-    lastY = event.clientY;
-    yaw -= dx * 0.008;
-    pitch = Math.max(-1.2, Math.min(1.2, pitch + dy * 0.008));
+    const dx = event.clientX - lastX, dy = event.clientY - lastY;
+    moved += Math.abs(dx) + Math.abs(dy); lastX = event.clientX; lastY = event.clientY;
+    yaw -= dx * 0.008; pitch = Math.max(-1.2, Math.min(1.2, pitch + dy * 0.008));
   });
   canvas.addEventListener("pointerup", (event) => {
     dragging = false;
@@ -286,28 +163,9 @@ export function mountBrainGraph() {
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
-    const hits = raycaster.intersectObjects([...nodeMaterial.values()], false);
-    if (hits[0]?.object.userData.id) mark(hits[0].object.userData.id);
+    const hit = raycaster.intersectObjects([...cores.values()], false)[0];
+    if (hit?.object.userData.id) mark(hit.object.userData.id);
   });
-  canvas.addEventListener("wheel", (event) => {
-    event.preventDefault();
-    distance = Math.max(12, Math.min(90, distance + event.deltaY * 0.03));
-  }, { passive: false });
-
-  resize();
-  placeCamera();
-  return {
-    sync(visible) {
-      if (visible) {
-        resize();
-        if (!running) {
-          running = true;
-          frame = requestAnimationFrame(render);
-        }
-        return;
-      }
-      running = false;
-      if (frame) cancelAnimationFrame(frame);
-    },
-  };
+  canvas.addEventListener("wheel", (event) => { event.preventDefault(); distance = Math.max(12, Math.min(90, distance + event.deltaY * 0.03)); }, { passive: false });
+  return { sync(visible) { if (!visible) { running = false; if (frame) cancelAnimationFrame(frame); return; } if (!running) { running = true; frame = requestAnimationFrame(render); } } };
 }

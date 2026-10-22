@@ -36,63 +36,28 @@ export function normalizePublicPath(pathname) {
 }
 
 function loadBrainSnapshot() {
-  try {
-    return JSON.parse(readFileSync(new URL("./public/brain-snapshot.json", import.meta.url), "utf8"));
-  } catch {
-    return {};
-  }
+  try { return JSON.parse(readFileSync(new URL("./public/brain-snapshot.json", import.meta.url), "utf8")); }
+  catch { return {}; }
 }
-
 const brainSnapshot = loadBrainSnapshot();
 let threeModuleBytes = null;
-
 function threeModule() {
-  if (!threeModuleBytes) {
-    threeModuleBytes = readFileSync(fileURLToPath(import.meta.resolve("three")));
-  }
+  threeModuleBytes ??= readFileSync(fileURLToPath(import.meta.resolve("three")));
   return threeModuleBytes;
 }
-
-export function brainTabEnabled() {
-  return process.env.BRAIN_TAB === "1";
-}
-
+export function brainTabEnabled() { return process.env.BRAIN_TAB === "1"; }
 export function embedSnapshot(snapshot) {
-  return JSON.stringify(snapshot)
-    .replaceAll("<", "\\u003c")
-    .replaceAll("\u2028", "\\u2028")
-    .replaceAll("\u2029", "\\u2029");
+  return JSON.stringify(snapshot).replaceAll("<", "\\u003c").replaceAll("\u2028", "\\u2028").replaceAll("\u2029", "\\u2029");
 }
 
-const BRAIN_TAB_STYLE = `
-html[data-brain-snapshot="1"] #panel-brain > .panel-head .kicker,
-html[data-brain-snapshot="1"] #panel-brain > .panel-head h2,
-html[data-brain-snapshot="1"] #panel-brain > .panel-head button,
-html[data-brain-snapshot="1"] #panel-brain > .slider,
-html[data-brain-snapshot="1"] #panel-brain > .stage { display: none; }
-#brain-snapshot { display: grid; gap: 14px; }
-#brain-snapshot-label { margin: 0; max-width: 72ch; color: #7ef0d4; font-family: "Fragment Mono", ui-monospace, monospace; }
-#brain-snapshot-counts { margin: 0; color: #9aa8b2; }
-#brain-snapshot .brain-stage { display: flex; gap: 18px; align-items: stretch; }
-#brain-snapshot-canvas { width: min(100%, 900px); height: 640px; display: block; background: #070b10; border: 1px solid #2c3a46; }
-#brain-snapshot-aside { display: grid; align-content: start; gap: 8px; flex: 1; min-width: 220px; }
-#brain-snapshot-aside button { text-align: left; font: 14px/1.4 "Fragment Mono", ui-monospace, monospace; color: #f3efe6; background: #12181f; border: 1px solid #2c3a46; padding: 8px 10px; }
-#brain-snapshot-aside button[aria-current="true"] { border-color: #7ef0d4; color: #7ef0d4; }
-@media (max-width: 800px) {
-  #brain-snapshot .brain-stage { flex-direction: column; }
-  #brain-snapshot-canvas { height: 420px; }
-}
-`;
+const BRAIN_TAB_STYLE = "html[data-brain-snapshot='1'] #panel-brain>.panel-head .kicker,html[data-brain-snapshot='1'] #panel-brain>.panel-head h2,html[data-brain-snapshot='1'] #panel-brain>.panel-head button,html[data-brain-snapshot='1'] #panel-brain>.slider,html[data-brain-snapshot='1'] #panel-brain>.stage{display:none}#brain-snapshot{display:grid;gap:14px}#brain-snapshot-label{margin:0;max-width:72ch;color:#7ef0d4;font-family:Fragment Mono,ui-monospace,monospace}#brain-snapshot-counts{margin:0;color:#9aa8b2}#brain-snapshot .brain-stage{display:flex;gap:18px}#brain-snapshot-canvas{width:min(100%,900px);height:640px;display:block;background:#070b10;border:1px solid #2c3a46}#brain-snapshot-aside{display:grid;align-content:start;gap:8px;flex:1;min-width:220px}#brain-snapshot-aside button{text-align:left;font:14px/1.4 Fragment Mono,ui-monospace,monospace;color:#f3efe6;background:#12181f;border:1px solid #2c3a46;padding:8px 10px}#brain-snapshot-aside button[aria-current=true]{border-color:#7ef0d4;color:#7ef0d4}";
 
 export function applyBrainTab(html, snapshot, enabled) {
   if (!enabled) return html;
   const json = embedSnapshot(snapshot ?? {});
   const head = `<script type="importmap">{"imports":{"three":"/vendor/three/three.module.js"}}</script><style>${BRAIN_TAB_STYLE}</style>`;
   const block = `<div id="brain-snapshot"><p id="brain-snapshot-label">${DISCLAIMER}</p><p id="brain-snapshot-counts"></p><div class="brain-stage"><canvas id="brain-snapshot-canvas" aria-label="Memory index snapshot"></canvas><aside id="brain-snapshot-aside"></aside></div></div><script type="application/json" id="brain-snapshot-data">${json}</script>`;
-  return html
-    .replace('<html lang="en">', '<html lang="en" data-brain-snapshot="1">')
-    .replace("</head>", `${head}</head>`)
-    .replace('<section data-panel="brain" id="panel-brain" hidden>', `<section data-panel="brain" id="panel-brain" hidden>${block}`);
+  return html.replace('<html lang="en">', '<html lang="en" data-brain-snapshot="1">').replace("</head>", `${head}</head>`).replace('<section data-panel="brain" id="panel-brain" hidden>', `<section data-panel="brain" id="panel-brain" hidden>${block}`);
 }
 
 export function publicFilePath(name) {
@@ -137,18 +102,11 @@ export async function handleRequest(req, res) {
     }
     if (req.method === "GET" && pathname === "/") {
       const [type, body] = files.get("/");
-      if (!brainTabEnabled()) {
-        send(res, 200, type, body);
-        return;
-      }
-      send(res, 200, type, applyBrainTab(body.toString("utf8"), brainSnapshot, true));
+      send(res, 200, type, brainTabEnabled() ? applyBrainTab(body.toString("utf8"), brainSnapshot, true) : body);
       return;
     }
     if (req.method === "GET" && pathname === "/vendor/three/three.module.js") {
-      if (!brainTabEnabled()) {
-        sendJson(res, 404, { ok: false, error: "Not found" });
-        return;
-      }
+      if (!brainTabEnabled()) { sendJson(res, 404, { ok: false, error: "Not found" }); return; }
       send(res, 200, "text/javascript; charset=utf-8", threeModule());
       return;
     }
