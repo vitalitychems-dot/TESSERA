@@ -82,8 +82,14 @@ function parseArgs(argv) {
   let input = path.join(repoRoot, "docs/v2/v2-memory.jsonl");
   let output = path.join(repoRoot, "artifacts/console/public/brain-snapshot.json");
   for (let i = 0; i < argv.length; i += 1) {
-    if (argv[i] === "--input") input = path.resolve(argv[++i] ?? "");
-    else if (argv[i] === "--output") {
+    if (argv[i] === "--input") {
+      const value = argv[++i];
+      if (!value) {
+        console.error("error: --input requires a path");
+        process.exit(1);
+      }
+      input = path.resolve(value);
+    } else if (argv[i] === "--output") {
       const value = argv[++i];
       if (!value) {
         console.error("error: --output requires a path");
@@ -176,5 +182,12 @@ if (process.env.NODE_TEST_CONTEXT) {
     const result = spawnSync(process.execPath, [path.join(here, "export-snapshot.mjs"), "--output"], { encoding: "utf8", env });
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /--output requires a path/);
+  });
+  test("bare --input exits nonzero", () => {
+    const env = { ...process.env };
+    delete env.NODE_TEST_CONTEXT;
+    const result = spawnSync(process.execPath, [path.join(here, "export-snapshot.mjs"), "--input"], { encoding: "utf8", env });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /--input requires a path/);
   });
 }
