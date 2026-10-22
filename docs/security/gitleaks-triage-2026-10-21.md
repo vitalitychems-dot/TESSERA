@@ -318,42 +318,59 @@ Each `opened/` finding is one row. On this branch these rows are ignored by comm
 | likely-fixture | `jwt` | `opened/07_tesseract_consolidated/tess/server/sovereign-security-tester.ts` | 69 |
 | unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/server/summit-37-parallel-universes.ts` | 501 |
 
-## Suggested `.gitleaks.toml` changes (suggestions only, not applied)
+## Suggested `.gitleaks.toml` changes
+
+Item 2's five `^opened/` path allowlists are **REJECTED**. Do not copy them into config. The repo uses exact fingerprints in `.gitleaksignore`. The guard test `gitleaks config allowlists exact secrets only` forbids `paths =`.
 
 1. **Scope the CI scan (fixes 248 of 250 on every PR).** Scan only the commits the event brings in, for example `--log-opts="${BASE_SHA}..${HEAD_SHA}"` on pull requests and `--log-opts="${BEFORE}..${AFTER}"` on pushes, plus a periodic full scan. Or check out with `fetch-depth: 0` without fetching every other branch. This changes `scripts/gitleaks-scan.mjs` and the workflow, not the allowlist.
-2. **Line-scoped allowlists for the archive branches.** These match on the surrounding line, not the value, and keep the repo's existing "no path blanket" policy. Every suggestion block below is limited to `^opened/` paths. They are still suggestions.
+2. **REJECTED — do not copy these five `^opened/` path allowlists.** The blocks below are historical samples only. Do not paste any of them into `.gitleaks.toml` or any other config. The repo ignores the `opened/` findings with exact `commit:file:rule:line` fingerprints in the root `.gitleaksignore`. The guard test `gitleaks config allowlists exact secrets only` (`scripts/gitleaks-scan.test.mjs`) reads `.gitleaks.toml` and forbids any `paths =` line. Copying a block below fails that test.
 
 ```toml
+# REJECTED sample 1 of 5. DO NOT COPY into .gitleaks.toml.
+# Ignore mechanism: exact fingerprints in .gitleaksignore.
+# Guard test "gitleaks config allowlists exact secrets only" forbids `paths =`.
 [[allowlists]]
-description = "Archive app data: secretLanguageId is a cipher-* label, not a credential (opened/* secret-society.json)"
+description = "REJECTED. Archive app data sample. Do not copy. secretLanguageId is a cipher-* label, not a credential (opened/* secret-society.json)"
 targetRules = ["generic-api-key"]
 paths = ['''^opened/''']
 regexTarget = "line"
 regexes = ['''"secretLanguageId":\s*"''']
 
+# REJECTED sample 2 of 5. DO NOT COPY into .gitleaks.toml.
+# Ignore mechanism: exact fingerprints in .gitleaksignore.
+# Guard test "gitleaks config allowlists exact secrets only" forbids `paths =`.
 [[allowlists]]
-description = "Public Solana TSRT mint address in archived TypeScript under opened/ (one value across five .ts files; none is .env.example)"
+description = "REJECTED. Do not copy. Public Solana TSRT mint address in archived TypeScript under opened/ (one value across five .ts files; none is .env.example)"
 targetRules = ["generic-api-key"]
 paths = ['''^opened/''']
 regexTarget = "line"
 regexes = ['''TSRT [Tt]oken''', '''tokenAddress:\s*"''', '''LIMN_TOKEN_CA=''']
 
+# REJECTED sample 3 of 5. DO NOT COPY into .gitleaks.toml.
+# Ignore mechanism: exact fingerprints in .gitleaksignore.
+# Guard test "gitleaks config allowlists exact secrets only" forbids `paths =`.
 [[allowlists]]
-description = "Unsigned alg=none JWT used as a 'Token Forgery' attack payload in the security tester"
+description = "REJECTED. Do not copy. Unsigned alg=none JWT used as a 'Token Forgery' attack payload in the security tester"
 targetRules = ["jwt"]
 paths = ['''^opened/''']
 regexTarget = "line"
 regexes = ['''name: "Token Forgery", payload: "''']
 
+# REJECTED sample 4 of 5. DO NOT COPY into .gitleaks.toml.
+# Ignore mechanism: exact fingerprints in .gitleaksignore.
+# Guard test "gitleaks config allowlists exact secrets only" forbids `paths =`.
 [[allowlists]]
-description = "Prose naming free public data sources (no keys) under opened/"
+description = "REJECTED. Do not copy. Prose naming free public data sources (no keys) under opened/"
 targetRules = ["generic-api-key"]
 paths = ['''^opened/''']
 regexTarget = "line"
 regexes = ['''no API keys needed:''']
 
+# REJECTED sample 5 of 5. DO NOT COPY into .gitleaks.toml.
+# Ignore mechanism: exact fingerprints in .gitleaksignore.
+# Guard test "gitleaks config allowlists exact secrets only" forbids `paths =`.
 [[allowlists]]
-description = "Benchmark sample string in honest-benchmark.ts"
+description = "REJECTED. Do not copy. Benchmark sample string in honest-benchmark.ts"
 targetRules = ["generic-api-key"]
 paths = ['''^opened/''']
 regexTarget = "line"
@@ -361,6 +378,6 @@ regexes = ['''const secret = "password = ''']
 ```
 
 3. **Credential-guard test.** The line-15 fixture is ignored by two commit fingerprints in the root `.gitleaksignore`, not by a path allowlist. Do not add the fixture string as a secret regex. Other lines in `scripts/tessera-credential-guard.test.mjs` stay flagged. Rewriting fixtures with a `synthetic-` or `xxxx` marker so they stop matching is still open, and the values are not reproduced here.
-4. **Open decision for Father, proposed in a separate PR.** Excluding `opened/*` from the scan is not in effect on this branch. Whether those archive branches should be left out of Secret scan is an open decision for Father, proposed in a separate PR (`security/gitleaks-exclude-opened`). This triage does not adopt that exclusion, and it does not delete or propose deleting any branch.
+4. **REJECTED.** A `paths` exclusion for `opened/*` is not the scan rule. #534 merged the fingerprint ignore onto `main` (squash `6f301c74`). Do not add `paths = ['''^opened/''']`. The guard test `gitleaks config allowlists exact secrets only` forbids `paths =`. This triage does not delete or propose deleting any branch.
 
 _Triage by Computer (TESSERA orchestrator), 2026-10-21. Report-only. Classes are likely-live, likely-fixture, and unknown. Two fixture findings ignored via `.gitleaksignore`._
