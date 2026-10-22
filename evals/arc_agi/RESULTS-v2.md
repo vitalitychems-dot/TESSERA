@@ -3,6 +3,7 @@
 TESTED one eval after `893c6c49` (solver files unchanged). Numpy 1.26.4. Dataset sha256 `4d9a15441fd20199f4fb419641ead13aaef357695abcc7e0ea243e3548a16dfb`. Development on training only is REPORTED. Do not re-run this eval split.
 A v3 needs a new training-only prereg plus a held-out training split before any eval, to catch the train-to-eval gap (REPORTED +4 on train, TESTED 0 on eval).
 It also needs a positive control on one training task that must fire the path, and an evaluated/fired counter recorded for every test. No eval re-run.
+REPORTED: baseline git_dirty is true because untracked results/20261022T040224Z/summary.json was on disk when that run sampled git status --porcelain; v2 at the same commit 893c6c49 was false. Frozen solver hashes still match.
 
 | metric | v2 `20261022T040224Z` | baseline `20261022T040414Z` |
 | --- | ---: | ---: |
