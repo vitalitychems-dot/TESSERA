@@ -2,7 +2,7 @@
 - [Manus public shares](manus-public-share.md) — reading a public transcript does not grant access to the authenticated Manus collaboration workspace.
 - [TESSERA launch policy](tessera-launch-policy.md) — canonical GitHub source and Gitbook deployment rules; preserve owner gates and protected archives.
 - [Multi-repo workflow](tessera-multi-project-topology.md) — owner repos are in scope; storage holds raw material, memory holds context pointers, and review precedes execution.
-- [Worker and dependency authority](tessera-worker-governance.md) — models and packages stay least-privilege tools; the owner retains final authority and violations trigger isolation.
+- [Worker and dependency authority](tessera-worker-governance.md) — models and packages stay least-privilege; don't attribute the disputed Collab surveillance line to the owner.
 - [Public repository imports](public-repository-imports.md) — check anonymous access before treating a failed GitHub credential as a private-repo problem.
 - [TESSERA live world interface](tessera-design-direction.md) — unify the voxel-inspired Eye, Brain, and Chat using real, clearly sourced live data.
 - [Tessera visual identity](tessera-identity.md) — non-sensitive portrait brief and offline-generation boundary; the private origin mark stays withheld.

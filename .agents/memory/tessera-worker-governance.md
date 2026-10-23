@@ -32,3 +32,9 @@ The owner wants the named Eye projects combined using their original data provid
 **Why:** The owner emphasized operational defensive use and the need to distinguish real coverage from mock displays.
 
 **How to apply:** Establish authorized asset and data-source scope before enabling collection. Keep public threat intelligence and consent-based monitoring separate from personal tracking or identity enrichment. A repository's availability or a stated defensive purpose does not prove permission to access devices or track people.
+
+The owner says they did not author the “No surveillance of real people” sentence in Collab's mesh flow. The file history does not establish who originally wrote it, so do not attribute that sentence to the owner. Preserve the boundary against targeting or tracking people while distinguishing it from authorized monitoring of owned assets and public threat intelligence.
+
+**Why:** The owner directly disputed authorship, and the visible commit history does not prove original authorship. Removing the boundary to enable surveillance of people would create a privacy and safety risk.
+
+**How to apply:** Refer to this as existing repository text with authorship unverified. If the wording is revised, keep the restriction on personal surveillance and state the permitted scope for authorized assets and public sources explicitly.
