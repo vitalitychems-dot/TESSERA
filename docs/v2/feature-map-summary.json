@@ -1,10 +1,10 @@
 {
   "generatedFrom": "V2-FEATURE-MAP.csv (planner snapshot 2026-10-12)",
   "memoryPointer": "docs/v2/v2-memory.jsonl",
-  "memoryRecords": 573,
+  "memoryRecords": 759,
   "memoryTypes": {
-    "entity": 245,
-    "relation": 328
+    "entity": 338,
+    "relation": 421
   },
   "featureMapRows": 318,
   "malformedRows": 0,
