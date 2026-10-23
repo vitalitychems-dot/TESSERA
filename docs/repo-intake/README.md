@@ -40,3 +40,57 @@ a list of GitHub URLs is not proof all projects can be analyzed by one command.
   GitMesh transfer rules.
 - Retrieval integration into Tessera chat with citations, freshness and explicit
   unavailable states. Current CLI lookup is only a local reference lookup.
+
+## File-level inspection
+
+```sh
+python3 scripts/repository-file-audit.test.py
+python3 scripts/repository-file-audit.py
+# Resume the same recorded snapshots; omit --resume to inspect new upstream HEADs.
+python3 scripts/repository-file-audit.py --resume
+```
+
+This inventories every tracked path in each default-branch Git tree at a recorded
+commit. It never checks out code, follows submodules or symlinks, or invokes
+target programs. Archive text is matched against its Git blob ID before inspection.
+Per-file records include explicit binary, LFS, oversized, missing-content and
+integrity-failure states. Text inspection records hashes, line counts and structural
+signals; it is not a semantic review, security audit, or REA execution.
+
+Limits per repository: 80 MiB compressed archive, 256 MiB expanded archive, 180
+seconds of streaming plus socket timeouts; per text file: 512 KiB. Files outside
+these limits remain inventoried but **not inspected**. No raw source, secret-like
+content, or external instructions are copied into model memory. Results are saved
+under `generated-artifacts/repository-audit/`, excluded from Git and publishing.
+The small summary is a progress ledger; partial runs retain their actual counts.
+
+Create a self-contained, offline-searchable report after the run:
+
+```sh
+python3 scripts/repository-audit-report.py
+python3 scripts/repository-audit-report.test.py
+```
+
+To recover text omitted by archive budgets or archive/Git byte differences:
+
+```sh
+python3 scripts/repository-audit-fill-gaps.py
+python3 scripts/repository-audit-report.py
+```
+
+Gap recovery fetches the **same recorded commit**, requests only blobs below
+512 KiB, and reads only objects actually present locally, with lazy fetching
+disabled. It never checks out source. Original archive results remain in the
+ledger; the separate gap-fill result records how much was recovered. Large
+binary content and absent blobs are still not claimed as inspected.
+
+The report includes every inventoried file path and inspection status with a
+commit-pinned source link. It stores no source bodies and searching it does not
+call an LLM or authorize execution. A blob mismatch is an unverified-content
+state, not a finding of malicious modification: Git archive export substitutions
+or LFS expansion can also change archive bytes relative to Git blobs.
+
+REA execution remains separate. Upstream `rea-agents@6.7.0` declares MIT, but its
+runtime dependency `openpgp@6.3.2` declares LGPL-3.0+. The project's dependency
+license policy requires review before adopting conditional/copyleft dependencies.
+No REA package was installed or run during this file-coverage pass.

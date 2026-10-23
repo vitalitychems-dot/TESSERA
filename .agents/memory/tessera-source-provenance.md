@@ -20,3 +20,9 @@ description: Rules for grounding factual replies in source records and preservin
 **Why:** A broad search-dump heuristic discarded short factual replies merely because they cited Wikipedia, making correct retrieved answers look like identity failures.
 
 **How to apply:** Distinguish actual identity/search dumps from factual citations, and preserve tests demonstrating that a normal cited answer survives voice enforcement.
+
+**Repository archive boundary:** A GitHub archive's bytes need not equal the pinned Git blobs, because export substitutions and LFS handling can transform them. A mismatch is unverified content, not proof of malicious modification.
+
+**Why:** Repository-wide inspection encountered archive/blob mismatches and archive size limits despite complete Git tree inventories.
+
+**How to apply:** Track tree inventory separately from content inspection. Verify source against pinned blobs, recover bounded text from filtered Git objects when necessary, and keep binaries, submodules, oversized files and unread content explicitly unreviewed.

@@ -56,3 +56,17 @@ mtime_ms = 1792561163859
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:c009c0f4-4527-4ee1-86d1-fae6a4247dee/91b728aa-b10e-4f7e-8497-e2e4734f78c5/88e0c70e-2085-4a69-a22a-68efc7ec9f7a"
 storage_version_token = "1792561168378351"
 content_type = "image/png"
+
+[[outputs]]
+id = "eHItppmg1bPe7XLw_Ti7r"
+uri = "file://generated-artifacts/repository-audit/file-coverage.html"
+type = "html"
+title = "Tessera — 47-Repository File Coverage"
+description = "Offline-searchable index of 84,421 tracked paths, with commit-pinned links and explicit inspection coverage. Includes 81,275 structurally inspected text files; not a security clearance or REA execution report."
+logical_id = "0ef85c5d-f5f5-4868-bceb-d90f1279d855"
+content_hash = "sha256:b8aede714f64502627fbfb4820243a21a40e6ccfea4fea01ab518b350862b7f6"
+size = 1763155
+mtime_ms = 1792725064074
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:c009c0f4-4527-4ee1-86d1-fae6a4247dee/0ef85c5d-f5f5-4868-bceb-d90f1279d855/86d40ba1-2904-434f-a714-05f1353da056"
+storage_version_token = "1792725082358362"
+content_type = "text/html"
