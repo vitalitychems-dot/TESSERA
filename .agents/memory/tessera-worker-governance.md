@@ -26,3 +26,9 @@ The owner wants the named Eye projects combined using their original data provid
 **Why:** This was the owner's explicit approval condition, not permission for unrestricted tool execution.
 
 **How to apply:** Keep REA out of app runtime imports and production services. Analyze bounded GitHub source snapshots only; do not use it against local applications, devices, or unrelated targets. Preserve source evidence separately from trusted app memory.
+
+**Eye product requirement:** The owner describes Eye as a cybersecurity-company capability for protecting clients and requires real, source-backed observations rather than simulated surveillance.
+
+**Why:** The owner emphasized operational defensive use and the need to distinguish real coverage from mock displays.
+
+**How to apply:** Establish authorized asset and data-source scope before enabling collection. Keep public threat intelligence and consent-based monitoring separate from personal tracking or identity enrichment. A repository's availability or a stated defensive purpose does not prove permission to access devices or track people.

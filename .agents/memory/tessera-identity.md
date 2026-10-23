@@ -14,3 +14,9 @@ The non-sensitive creative brief for Tessera artwork uses a navy garment, dark h
 **Why:** The owner selected offline self-hosting instead of a hosted image service for this capability.
 
 **How to apply:** Do not route Tessera portrait generation through a hosted provider unless the owner explicitly changes this choice. A Git repository or stored model file is not an inference runtime; verify an owner-controlled local model service before saying Tessera generated an image.
+
+**Original-record boundary:** Leave the original uploaded records and Git history unchanged.
+
+**Why:** After being told that private-mark copies remain in original uploads and history, the owner explicitly chose to preserve both rather than redact the originals or rewrite history.
+
+**How to apply:** Do not alter those originals or rewrite history without a new explicit approval. This does not authorize reproducing the private mark in memory, reports, generated assets, prompts, or exports.

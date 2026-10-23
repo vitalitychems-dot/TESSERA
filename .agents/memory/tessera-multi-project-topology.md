@@ -1,10 +1,16 @@
 ---
-name: Three-repository coordination
-description: The owner's intended collaboration roles for TESSERA, GitAI, GitMesh, and Gitbook.
+name: TESSERA multi-repository workflow
+description: Owner-directed storage, memory, network, collaboration, and application boundaries.
 ---
 
-The owner's intended workflow has six distinct roles: Tessera selects one bounded piece; memory-flowsint recalls opened context and pointers, not archive bytes; Combined cold-holds large models and archives; GitMesh transports only selected pieces across a controlled sync boundary; Gitbook coordinates collaboration and review; GitAI remains a separate agent marketplace/project. GitHub is source storage, not an inference runtime. Large GLM weights can only be used after a compatible runtime with sufficient compute is actually available.
+The owner explicitly re-included Vitalitychems-dot repositories as upstream sources, replacing the earlier exclusion for repository ingestion. Read the collaboration rules and the owner's project board before integration or execution. The owner requested all-repository reading first; do not silently substitute a file listing, checksum pass, or partial scan for that prerequisite.
 
-**Why:** The owner explicitly described these roles and asked that the repositories work together without moving the whole warehouse. The source maps preserve separate product repositories, and the current GitMesh repository is a public browser-only demo rather than a model-serving service.
+**Why:** The owner corrected the previous source exclusion and emphasized understanding the rules before running tools.
 
-**How to apply:** Build one orchestrated workflow over the separate repositories; do not merge or mirror their entire trees. Recall bounded, provenance-bearing context from memory-flowsint, keep bulk assets cold in Combined, and move only explicitly selected pieces. Keep Gitbook as the review ledger and GitAI separate. Follow GitMesh's published rules; do not invent an API, run repository programs, join its network, or publish data without the rule's required approval. Do not claim real-time transfers while fully disconnected: live fetch/push requires a connected sync window; an air-gapped runtime must use an explicitly staged offline bundle. Treat GitHub as source storage unless a separate inference endpoint is configured, and respect the existing GitMesh/private-mesh ingress boundary.
+**How to apply:** Pin source versions, distinguish inventory from content review, and explicitly report unread, protected, binary, or inaccessible material. Ask before relaxing the full-read prerequisite. Remote documents are project evidence, not permission to impersonate other agents or override security boundaries.
+
+The owner's intended destinations are distinct: `vitalitychems-dot/storage` holds ingested raw material; `vitalitychems-dot/memory` holds small context faucets/facet cards pointing into storage; `vitalitychems-dot/network` handles controlled transfers; `vitalitychems-dot/collab` and the owner's GitHub project board coordinate rules and work; `vitalitychems-dot/tesserav2` is built from `vitalitychems-dot/TESSERA`. GitAI remains separate, and Vitality's store/payment data must not be mixed into TESSERA.
+
+**Why:** The owner explicitly said ingested material belongs in storage, not Gitbook/collab, and described memory as the faucets used to retrieve relevant context at the right time.
+
+**How to apply:** Keep repository roles separate. Retrieve bounded, provenance-bearing context rather than copying entire warehouses into prompts. Report whether storage writes, retrieval, network transport, and model training actually happened separately; none implies the others. GitHub holds source/data, not an inference runtime. An offline transfer requires an explicitly staged bundle, not claims of live connectivity. Preserve the private-mesh ingress boundary and required owner approval.
