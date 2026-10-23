@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Archive, Download } from "lucide-react";
-import library from "@/data/source-library.json";
-import { useSourceMemorySearch, useSourceMemoryStatus } from "@/hooks/use-source-memory";
+import { useSourceMemoryCatalog, useSourceMemorySearch, useSourceMemoryStatus } from "@/hooks/use-source-memory";
 import { PageHead, Panel, Skeleton, queryState, observed, type DataState } from "@/components/workspace/Surface";
-
-const CATEGORIES = Array.from(new Set(library.records.flatMap(r => r.categories))).sort();
 
 function statusState(query: ReturnType<typeof useSourceMemoryStatus>): DataState {
   if (query.data && !query.data.available) return "unavailable";
@@ -18,22 +15,29 @@ export default function MemoryPage() {
   const [limit, setLimit] = useState(12);
   const [notice, setNotice] = useState("");
   const status = useSourceMemoryStatus();
+  const catalog = useSourceMemoryCatalog(cat);
   const search = useSourceMemorySearch(q);
   const searching = q.trim().length >= 2;
-
-  const snapshotRecords = useMemo(() => {
-    return library.records.filter(r => !cat || r.categories.includes(cat));
-  }, [cat]);
-  const inspected = library.records.reduce((s, r) => s + (r.textFilesInspected ?? 0), 0);
+  const records = useMemo(() => catalog.data?.records ?? [], [catalog.data?.records]);
 
   function exportCatalog() {
+    if (!catalog.data) {
+      setNotice("The live catalog is unavailable; no file was created.");
+      return;
+    }
     try {
-      const url = URL.createObjectURL(new Blob([JSON.stringify(library, null, 2)], { type: "application/json" }));
+      const snapshot = {
+        capturedAt: new Date(catalog.dataUpdatedAt).toISOString(),
+        source: "/api/source-memory/catalog",
+        scope: "Metadata-only references. This export does not contain repository source code, model weights, or installed tools.",
+        ...catalog.data,
+      };
+      const url = URL.createObjectURL(new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" }));
       const a = document.createElement("a");
-      a.href = url; a.download = "tessera-source-library.json";
+      a.href = url; a.download = "tessera-source-memory-catalog.json";
       document.body.append(a); a.click(); a.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
-      setNotice("Export started. The file holds reference metadata only: no repository code, model weights, or tools.");
+      setNotice("Export started. This is the currently loaded metadata-only catalog page.");
     } catch {
       setNotice("Export failed. Try a browser that allows file downloads.");
     }
@@ -50,13 +54,14 @@ export default function MemoryPage() {
           source={<>Source: /api/source-memory/status · owner-only · polled every 60s<br />Observed: {observed(status.dataUpdatedAt)}</>}>
           {status.isLoading ? <Skeleton rows={2} /> : status.data?.available ? (
             <>
-              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                 <div className="ws-stat"><dt>Evidence pointers</dt><dd data-testid="text-memory-count">{status.data.records.toLocaleString()}</dd></div>
+                <div className="ws-stat"><dt>Repositories</dt><dd>{status.data.repositories.toLocaleString()}</dd></div>
+                <div className="ws-stat"><dt>Capability references</dt><dd>{status.data.catalogRecords.toLocaleString()}</dd></div>
+                <div className="ws-stat"><dt>REA snapshots</dt><dd>{status.data.reaSnapshots.toLocaleString()}</dd></div>
                 <div className="ws-stat"><dt>Model trained</dt><dd>No</dd></div>
-                <div className="ws-stat"><dt>Execution allowed</dt><dd>No</dd></div>
-                <div className="ws-stat"><dt>External sync</dt><dd>No</dd></div>
               </dl>
-              <p className="ws-note mt-3">Index last recorded: {observed(status.data.checkedAt)}. The database is read-only for this API and stays outside the model runtime.</p>
+              <p className="ws-note mt-3">Index last recorded: {observed(status.data.checkedAt)}. Search uses pinned evidence pointers only; it does not train a model or execute repositories.</p>
             </>
           ) : (
             <div role="status">
@@ -66,8 +71,9 @@ export default function MemoryPage() {
           )}
         </Panel>
 
-        <Panel title="Context faucet" labelId="memory-faucets" state={searching ? queryState(search) : "snapshot"} testId="panel-memory-faucets"
-          source={searching ? "Source: /api/source-memory/search · bounded FTS query over the owner-only SQLite index." : "Browse mode uses the saved source-library snapshot. Type at least two characters to query the live index."}>
+        <Panel title="Context faucet and capability catalog" labelId="memory-faucets"
+          state={searching ? queryState(search) : queryState(catalog)} testId="panel-memory-faucets"
+          source={searching ? "Source: /api/source-memory/search · bounded owner-only FTS query; supported categories only." : "Source: /api/source-memory/catalog · owner-only SQLite metadata, refreshed every 60s."}>
           <label htmlFor="memory-search" className="block text-sm mb-1.5">Search stored context</label>
           <input id="memory-search" type="search" className="ws-input" value={q} placeholder="memory, video, security…"
             onChange={e => { setQ(e.target.value); setLimit(12); }} data-testid="input-memory-search" />
@@ -75,7 +81,7 @@ export default function MemoryPage() {
           {!searching && (
             <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="Filter saved snapshot by category">
               <button type="button" className="ws-chip ws-chip-btn" aria-pressed={cat === null} onClick={() => setCat(null)} data-testid="button-cat-all">All</button>
-              {CATEGORIES.map(c => <button type="button" key={c} className="ws-chip ws-chip-btn" aria-pressed={cat === c} onClick={() => { setCat(cat === c ? null : c); setLimit(12); }} data-testid={`button-cat-${c}`}>{c}</button>)}
+              {(catalog.data?.categories ?? []).map(c => <button type="button" key={c} className="ws-chip ws-chip-btn" aria-pressed={cat === c} onClick={() => { setCat(cat === c ? null : c); setLimit(12); }} data-testid={`button-cat-${c}`}>{c}</button>)}
             </div>
           )}
 
@@ -101,34 +107,32 @@ export default function MemoryPage() {
             </>
           ) : (
             <>
-              <p className="ws-meta mt-3" aria-live="polite" data-testid="text-memory-matches">{snapshotRecords.length} snapshot pointers</p>
-              {snapshotRecords.length ? (
+              <p className="ws-meta mt-3" aria-live="polite" data-testid="text-memory-matches">{catalog.isLoading ? "Loading catalog…" : `${catalog.data?.total ?? 0} metadata references`}</p>
+              {catalog.isLoading ? <Skeleton /> : catalog.isError ? (
+                <div role="status"><p className="ws-err mt-3">The live capability catalog is unavailable. No bundled substitute is shown.</p>
+                  <button type="button" className="ws-btn mt-3" onClick={() => void catalog.refetch()} data-testid="button-retry-memory-catalog">Retry</button>
+                </div>
+              ) : records.length ? (
                 <ul className="mt-3 grid gap-3 md:grid-cols-2">
-                  {snapshotRecords.slice(0, limit).map(r => (
+                  {records.slice(0, limit).map(r => (
                     <li key={r.repository} className="ws-stat" data-testid={`card-pointer-${r.repository}`}>
                       <a href={r.url} target="_blank" rel="noopener noreferrer" className="ws-link font-medium">{r.repository}</a>
                       <p className="ws-note mt-1">{r.description || "No description in snapshot."}</p>
                       <div className="mt-2 flex flex-wrap gap-1">{r.categories.map(c => <span key={c} className="ws-chip">{c}</span>)}</div>
-                      <p className="ws-meta mt-2">{r.trackedFiles == null ? "No file inventory" : `${r.textFilesInspected.toLocaleString()} / ${r.trackedFiles.toLocaleString()} files read`} · {r.licenseLabel} · inspect: {r.reaStatus}<br />commit {r.commit ? r.commit.slice(0, 12) : "not pinned"} · not installed</p>
+                      <p className="ws-meta mt-2">{r.trackedFiles == null ? "No file inventory" : `${r.textFilesInspected.toLocaleString()} / ${r.trackedFiles.toLocaleString()} files recorded as inspected`} · {r.licenseLabel} · REA: {r.reaStatus} ({r.reaSnapshotFiles.toLocaleString()} snapshot files)<br />commit {r.commit ? r.commit.slice(0, 12) : "not pinned"} · installed: no · executed: no · license approval: {r.licenseApprovedForIntegration ? "yes" : "no"}</p>
                     </li>
                   ))}
                 </ul>
-              ) : <p className="ws-note mt-3">No snapshot pointers match this category.</p>}
-              {snapshotRecords.length > limit && <button type="button" className="ws-btn mt-4" onClick={() => setLimit(snapshotRecords.length)} data-testid="button-memory-showall">Show all {snapshotRecords.length}</button>}
+              ) : <p className="ws-note mt-3">No metadata references match this category.</p>}
+              {records.length > limit && <button type="button" className="ws-btn mt-4" onClick={() => setLimit(records.length)} data-testid="button-memory-showall">Show all {records.length}</button>}
             </>
           )}
         </Panel>
 
-        <Panel title="Saved catalog snapshot" labelId="memory-snapshot" state="snapshot" testId="panel-memory-snapshot"
-          source={<>Source: src/data/source-library.json · schema v{library.schemaVersion} · captured {observed(library.capturedAt)}</>}>
-          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="ws-stat"><dt>Repositories</dt><dd>{library.records.length}</dd></div>
-            <div className="ws-stat"><dt>Text files read</dt><dd>{inspected.toLocaleString()}</dd></div>
-            <div className="ws-stat"><dt>Model trained</dt><dd>{library.modelTrained ? "Yes" : "No"}</dd></div>
-            <div className="ws-stat"><dt>External sync</dt><dd>{library.externalStorageSynced ? "Yes" : "No"}</dd></div>
-          </dl>
-          <p className="ws-note mt-3">{library.scope} Every license is marked not approved for integration.</p>
-          <button type="button" className="ws-btn mt-4" onClick={exportCatalog} data-testid="button-export-memory"><Download size={16} aria-hidden="true" />Export catalog (JSON)</button>
+        <Panel title="Metadata export" labelId="memory-snapshot" state={catalog.data ? "live" : "unavailable"} testId="panel-memory-snapshot"
+          source="Source: currently loaded page from /api/source-memory/catalog">
+          <p className="ws-note">Export contains metadata references only, not repository code, model weights, or a full source review.</p>
+          <button type="button" className="ws-btn mt-4" onClick={exportCatalog} disabled={!catalog.data} data-testid="button-export-memory"><Download size={16} aria-hidden="true" />Export loaded catalog page (JSON)</button>
           <p role="status" aria-live="polite" className="ws-note mt-2" data-testid="status-export">{notice}</p>
         </Panel>
       </div>

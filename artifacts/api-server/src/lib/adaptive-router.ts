@@ -59,6 +59,8 @@ export function classifyQuery(input: string, opts?: { hasContext?: boolean; isAd
   } else if (opts?.isAdmin && wordCount > 20) {
     tier = "strong";
     reason = "admin request, escalating quality";
+  } else if (opts?.hasContext) {
+    reason = "bounded retrieved context is available";
   }
 
   const decision: RoutingDecision = {

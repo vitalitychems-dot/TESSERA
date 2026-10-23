@@ -1,22 +1,22 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { Link } from "wouter";
 import { Eye, GitBranch, Database } from "lucide-react";
 import { useWorldPulse } from "@/hooks/use-world-pulse";
-import library from "@/data/source-library.json";
+import { useSourceMemoryCatalog } from "@/hooks/use-source-memory";
 import { PageHead, Panel, Skeleton, StatePill, queryState, observed } from "@/components/workspace/Surface";
-
-const DEFENSIVE = /defen|security|privacy|foia/i;
 
 export default function EyePage() {
   useEffect(() => { document.title = "TESSERA | Eye"; }, []);
   const { service, repositories } = useWorldPulse();
+  const capabilityCatalog = useSourceMemoryCatalog("Security");
   const repos = repositories.data ?? [];
-  const defensiveRefs = useMemo(() => library.records.filter(r => r.categories.some(c => DEFENSIVE.test(c))).length, []);
+  const defensiveRefs = capabilityCatalog.data?.total ?? 0;
 
   return (
     <div className="ws-page" data-testid="eye-page">
       <PageHead eyebrow="Authorized observation / owner systems" title="Eye" icon={<Eye size={30} />} testId="eye"
-        onRefresh={() => { void service.refetch(); void repositories.refetch(); }} refreshing={service.isFetching || repositories.isFetching}>
+        onRefresh={() => { void service.refetch(); void repositories.refetch(); void capabilityCatalog.refetch(); }}
+        refreshing={service.isFetching || repositories.isFetching || capabilityCatalog.isFetching}>
         Health of Tessera's own service and the owner's public repositories, each labeled with where it came from. No camera feeds, no sensors, no tracking of people.
       </PageHead>
       <div className="space-y-4">
@@ -60,9 +60,25 @@ export default function EyePage() {
           )}
         </Panel>
 
-        <Panel title="Defensive reference shelf" labelId="eye-library" state="snapshot" testId="panel-eye-library"
-          source={<>Source: bundled source-library.json · captured {observed(library.capturedAt)}</>}>
-          <p className="ws-note">{defensiveRefs} stored references are tagged security, privacy, defense, or FOIA. They are reading material for protecting owner systems. None are installed or run, and the Eye never points them at people. <Link href="/memory" className="ws-link" data-testid="link-eye-memory">Browse in Memory</Link></p>
+        <Panel title="Defensive reference shelf" labelId="eye-library" state={queryState(capabilityCatalog)} testId="panel-eye-library"
+          source={<>Source: /api/source-memory/catalog?category=Security · owner-only · refreshed every 60s<br />Observed: {observed(capabilityCatalog.dataUpdatedAt)}</>}>
+          {capabilityCatalog.isLoading ? <Skeleton rows={2} /> : capabilityCatalog.data ? (
+            <>
+              <p className="ws-note">{defensiveRefs} metadata references are in the curated Security category. They are reference material only; none are installed or run. <Link href="/memory" className="ws-link" data-testid="link-eye-memory">Browse all capability facets in Memory</Link></p>
+              <ul className="mt-3 space-y-2">
+                {capabilityCatalog.data.records.slice(0, 6).map((item) => (
+                  <li key={item.repository} className="ws-stat">
+                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="ws-link font-medium">{item.repository}</a>
+                    <p className="ws-note mt-1">{item.description}</p>
+                    <p className="ws-meta mt-1">REA: {item.reaStatus} · commit {item.commit ? item.commit.slice(0, 12) : "unpinned"} · license approved for integration: {item.licenseApprovedForIntegration ? "yes" : "no"}</p>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <div role="status"><p className="ws-err">The live defensive reference catalog is unavailable. No bundled count is substituted.</p>
+              <button type="button" className="ws-btn mt-3" onClick={() => void capabilityCatalog.refetch()} data-testid="button-retry-eye-catalog">Retry</button></div>
+          )}
         </Panel>
       </div>
     </div>

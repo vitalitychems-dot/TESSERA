@@ -68,6 +68,100 @@ paths:
           description: Bridge rate limit exceeded
         "503":
           description: Bridge token is not configured
+  /source-memory/status:
+    get:
+      operationId: getSourceMemoryStatus
+      tags: [memory]
+      summary: Read source-memory index status
+      description: Owner-session protected. Reports generated evidence pointers and repository-analysis coverage; it does not report model training or code execution.
+      responses:
+        "200":
+          description: Current index status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceMemoryStatus"
+        "401":
+          description: Owner session required
+  /source-memory/catalog:
+    get:
+      operationId: getSourceMemoryCatalog
+      tags: [memory]
+      summary: Browse the reviewed capability-reference catalog
+      description: Owner-session protected. Returns metadata-only references from the generated local database; unsupported or out-of-scope categories are omitted.
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 80
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 100
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100000
+            default: 0
+      responses:
+        "200":
+          description: Catalog page and supported categories
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceMemoryCatalogPage"
+        "400":
+          description: Invalid category or pagination
+        "401":
+          description: Owner session required
+        "503":
+          description: Source-memory database unavailable
+  /source-memory/search:
+    get:
+      operationId: searchSourceMemory
+      tags: [memory]
+      summary: Retrieve bounded source-memory evidence
+      description: Owner-session protected. Returns commit-pinned, unverified references from supported capability categories only.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 1000
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 10
+      responses:
+        "200":
+          description: Bounded evidence pointers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceMemorySearchResponse"
+        "400":
+          description: Query is missing or invalid
+        "401":
+          description: Owner session required
+        "429":
+          description: Search rate limit exceeded
+        "503":
+          description: Source-memory database unavailable
 components:
   securitySchemes:
     AgentCraftBridgeToken:
@@ -75,6 +169,84 @@ components:
       scheme: bearer
       description: Server-only bridge token, stored in Replit Secrets and the local bridge environment.
   schemas:
+    SourceMemoryStatus:
+      type: object
+      properties:
+        ok: { const: true }
+        available: { type: boolean }
+        path: { type: ["string", "null"] }
+        records: { type: integer, minimum: 0 }
+        repositories: { type: integer, minimum: 0 }
+        catalogRecords: { type: integer, minimum: 0 }
+        reaSnapshots: { type: integer, minimum: 0 }
+        categories:
+          type: array
+          items: { type: string }
+        checkedAt: { type: ["string", "null"], format: date-time }
+        modelTrained: { const: false }
+        executionAllowed: { const: false }
+        externalStorageSynced: { const: false }
+        reason: { type: string, enum: [not-generated, unreadable] }
+      required: [ok, available, path, records, repositories, catalogRecords, reaSnapshots, categories, checkedAt, modelTrained, executionAllowed, externalStorageSynced]
+    SourceMemoryCatalogRecord:
+      type: object
+      properties:
+        repository: { type: string, pattern: "^[A-Za-z0-9_-]+/[A-Za-z0-9_.-]+$" }
+        description: { type: string, maxLength: 2000 }
+        categories:
+          type: array
+          items: { type: string }
+        url: { type: string, maxLength: 2048 }
+        licenseLabel: { type: string, maxLength: 80 }
+        licenseApprovedForIntegration: { type: boolean }
+        commit: { type: string, pattern: "^[0-9a-f]{40}$" }
+        trackedFiles: { type: ["integer", "null"], minimum: 0 }
+        textFilesInspected: { type: integer, minimum: 0 }
+        reaStatus: { type: string }
+        reaSnapshotFiles: { type: integer, minimum: 0 }
+        checkedAt: { type: string }
+        installed: { const: false }
+        executed: { const: false }
+      required: [repository, description, categories, url, licenseLabel, licenseApprovedForIntegration, commit, trackedFiles, textFilesInspected, reaStatus, reaSnapshotFiles, checkedAt, installed, executed]
+    SourceMemoryCatalogPage:
+      type: object
+      properties:
+        ok: { const: true }
+        records:
+          type: array
+          items: { $ref: "#/components/schemas/SourceMemoryCatalogRecord" }
+        total: { type: integer, minimum: 0 }
+        categories:
+          type: array
+          items: { type: string }
+        limit: { type: integer, minimum: 1, maximum: 200 }
+        offset: { type: integer, minimum: 0 }
+      required: [ok, records, total, categories, limit, offset]
+    SourceMemoryResult:
+      type: object
+      properties:
+        repository: { type: string }
+        path: { type: string }
+        context: { type: string, maxLength: 1500 }
+        commit: { type: string }
+        evidence: { type: string }
+        url: { type: string }
+        checkedAt: { type: string }
+        categories:
+          type: array
+          items: { type: string }
+      required: [repository, path, context, commit, evidence, url, checkedAt]
+    SourceMemorySearchResponse:
+      type: object
+      properties:
+        ok: { const: true }
+        results:
+          type: array
+          items: { $ref: "#/components/schemas/SourceMemoryResult" }
+        count: { type: integer, minimum: 0, maximum: 20 }
+        executionAllowed: { const: false }
+        modelTrained: { const: false }
+      required: [ok, results, count, executionAllowed, modelTrained]
     HealthStatus:
       type: object
       properties:

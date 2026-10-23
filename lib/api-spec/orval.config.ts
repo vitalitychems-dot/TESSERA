@@ -13,6 +13,29 @@ const titleTransformer: InputTransformerFn = (config) => {
   return config;
 };
 
+const zod3Transformer: InputTransformerFn = (config) => {
+  titleTransformer(config);
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (value === null || typeof value !== "object") return;
+    const schema = value as Record<string, unknown>;
+    if (schema.type === "integer") {
+      schema.type = "number";
+      schema.multipleOf = 1;
+    } else if (Array.isArray(schema.type) && schema.type.includes("integer")) {
+      schema.type = schema.type.map((part) => part === "integer" ? "number" : part);
+      schema.multipleOf = 1;
+    }
+    if (schema.format === "int32" || schema.format === "int64") delete schema.format;
+    Object.values(schema).forEach(visit);
+  };
+  visit(config);
+  return config;
+};
+
 export default defineConfig({
   "api-client-react": {
     input: {
@@ -30,6 +53,9 @@ export default defineConfig({
       clean: true,
       prettier: true,
       override: {
+        query: {
+          version: 5,
+        },
         fetch: {
           includeHttpResponseReturnType: false,
         },
@@ -44,7 +70,7 @@ export default defineConfig({
     input: {
       target: "./openapi.yaml",
       override: {
-        transformer: titleTransformer,
+        transformer: zod3Transformer,
       },
     },
     output: {

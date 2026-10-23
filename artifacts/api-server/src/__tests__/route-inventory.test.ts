@@ -299,10 +299,10 @@ describe("HYB-012 route inventory", () => {
 
   it("records the registration total", () => {
     console.info(`[route-inventory] registration total=${registrations.length}`);
-    // Snapshot includes the read-only Moltbook public-feed route, the two
+    // Snapshot includes the read-only Moltbook public-feed route, the three
     // owner-only source-memory routes, and the owner credential-status route.
     // Update when routes are added or removed.
-    expect(registrations.length).toBe(928);
+    expect(registrations.length).toBe(929);
   });
 
   it("allow-lists exactly the current duplicates, including the two ruling entries", () => {

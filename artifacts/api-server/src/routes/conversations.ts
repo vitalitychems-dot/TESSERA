@@ -21,6 +21,8 @@ import { enforceTesseraVoice, hasSelfClaim, isIdentityQuestion, isSearchDump, si
 import { runChatDesk } from "../lib/chat-collab";
 import { answerInContextWithEvidence, noteChamberTurn } from "../lib/chamber-learning";
 import { searchMemory } from "../lib/vector-memory";
+import { searchSourceMemory } from "../lib/source-memory-store";
+import { sourceMemoryEvidence } from "../lib/source-memory-faucet";
 import {
   formatIngestedRecallContext,
   recallIngestedKnowledgeWithProvenance,
@@ -642,6 +644,15 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
     noteChamberTurn(content);
     const intents = detectIntents(content);
     const hasToolIntent = intents.length > 0;
+    const wantsSourceMemory = /\b(repository|repositories|repo|repos|open source|github|capabilit(?:y|ies)|tools?|frameworks?|memory|faucet|video generation|web research|scrap(?:e|ing)|REA)\b/i.test(content);
+    let sourceMemoryHits: ReturnType<typeof searchSourceMemory> = [];
+    if (wantsSourceMemory) {
+      try {
+        sourceMemoryHits = searchSourceMemory(content, 4, { benignOnly: true });
+      } catch (err) {
+        logger.debug({ name: err instanceof Error ? err.name : "Error" }, "source-memory faucet retrieval skipped");
+      }
+    }
     const deskTurn = hasToolIntent || isIdentityQuestion(content) ? null : runChatDesk(content);
     const liveAnswer = !hasToolIntent && !deskTurn && !isIdentityQuestion(content)
       ? await answerInContextWithEvidence(content)
@@ -659,7 +670,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
     const localFastPath =
       deskTurn ||
       isIdentityQuestion(content) ||
-      (!shouldTryConfiguredPen && (Boolean(live) || !needsExternalKnowledge(content)));
+      (!shouldTryConfiguredPen && sourceMemoryHits.length === 0 && (Boolean(live) || !needsExternalKnowledge(content)));
     if (!hasToolIntent && localFastPath) {
       const localEvidence = deskTurn || isIdentityQuestion(content)
         ? []
@@ -750,8 +761,6 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
     }
 
     // ---- Adaptive model routing (T3) ----
-    const routingDecision = classifyQuery(content, { isAdmin: isAdminRequest, hasContext: ingestedRecall.length > 0 });
-
     // ---- Hybrid retrieval + citations (T4 + T10) ----
     let retrievedChunks: TesseraAnswerEvidence[] = [];
     try {
@@ -762,6 +771,11 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
     } catch (err) {
       logger.debug({ name: err instanceof Error ? err.name : "Error" }, "hybrid retrieval skipped");
     }
+    retrievedChunks.push(...sourceMemoryEvidence(sourceMemoryHits));
+    const routingDecision = classifyQuery(content, {
+      isAdmin: isAdminRequest,
+      hasContext: ingestedRecall.length > 0 || sourceMemoryHits.length > 0,
+    });
     const answerEvidence = createTesseraEvidenceAnswer(
       content,
       [...(liveAnswer?.evidence ?? []), ...retrievedChunks],

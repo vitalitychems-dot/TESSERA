@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react";
 import { Link } from "wouter";
 import { BrainCircuit } from "lucide-react";
 import { useWorldPulse } from "@/hooks/use-world-pulse";
-import { useSourceMemoryStatus } from "@/hooks/use-source-memory";
+import { useSourceMemoryCatalog, useSourceMemoryStatus } from "@/hooks/use-source-memory";
 import { PageHead, Panel, Skeleton, queryState, observed, type DataState } from "@/components/workspace/Surface";
 
 function sourceMemoryState(query: ReturnType<typeof useSourceMemoryStatus>): DataState {
@@ -14,6 +14,7 @@ export default function BrainPage() {
   useEffect(() => { document.title = "TESSERA | Brain"; }, []);
   const { brain } = useWorldPulse();
   const sourceMemory = useSourceMemoryStatus();
+  const capabilityCatalog = useSourceMemoryCatalog();
   const fmt = (n: number) => n.toLocaleString();
   const d = brain.data;
   const density = d && d.entries > 0 ? d.crossReferences / d.entries : null;
@@ -23,7 +24,8 @@ export default function BrainPage() {
   return (
     <div className="ws-page" data-testid="brain-page">
       <PageHead eyebrow="Software memory / indexed corpus" title="Brain" icon={<BrainCircuit size={30} />} testId="brain"
-        onRefresh={() => { void brain.refetch(); void sourceMemory.refetch(); }} refreshing={brain.isFetching || sourceMemory.isFetching}>
+        onRefresh={() => { void brain.refetch(); void sourceMemory.refetch(); void capabilityCatalog.refetch(); }}
+        refreshing={brain.isFetching || sourceMemory.isFetching || capabilityCatalog.isFetching}>
         What the running service has indexed. These are corpus statistics from the knowledge store, not a measurement of thought or consciousness.
       </PageHead>
       <div className="space-y-4">
@@ -57,13 +59,28 @@ export default function BrainPage() {
           source={<>Source: /api/source-memory/status · owner-only · polled every 60s<br />Observed: {observed(sourceMemory.dataUpdatedAt)}</>}>
           {sourceMemory.isLoading ? <Skeleton rows={2} /> : sourceMemory.data?.available ? (
             <>
-              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                 <div className="ws-stat"><dt>Evidence pointers</dt><dd data-testid="text-brain-sourcemem-count">{sourceMemory.data.records.toLocaleString()}</dd></div>
+                <div className="ws-stat"><dt>Repositories</dt><dd>{sourceMemory.data.repositories.toLocaleString()}</dd></div>
+                <div className="ws-stat"><dt>Capability references</dt><dd>{sourceMemory.data.catalogRecords.toLocaleString()}</dd></div>
+                <div className="ws-stat"><dt>REA snapshots</dt><dd>{sourceMemory.data.reaSnapshots.toLocaleString()}</dd></div>
                 <div className="ws-stat"><dt>Installed as tools</dt><dd>0</dd></div>
-                <div className="ws-stat"><dt>Execution allowed</dt><dd>No</dd></div>
-                <div className="ws-stat"><dt>Used for training</dt><dd>No</dd></div>
               </dl>
-              <p className="ws-note mt-3">These are read-only pointers to public repository evidence, kept separate from the indexed corpus above. <Link href="/memory" className="ws-link" data-testid="link-brain-memory">Open Memory</Link></p>
+              <p className="ws-note mt-3">Searchable, commit-pinned metadata is kept separate from the indexed corpus. It is not model training or tool execution. <Link href="/memory" className="ws-link" data-testid="link-brain-memory">Open Memory</Link></p>
+              {capabilityCatalog.data && (
+                <div className="mt-3">
+                  <p className="ws-meta mb-2">Capability facets: {capabilityCatalog.data.categories.join(" · ")}</p>
+                  <ul className="space-y-2">
+                    {capabilityCatalog.data.records.slice(0, 4).map((repo) => (
+                      <li key={repo.repository} className="ws-note">
+                        <a href={repo.url} target="_blank" rel="noopener noreferrer" className="ws-link">{repo.repository}</a>
+                        {" · "}{repo.categories.join(", ")}{" · commit "}{repo.commit ? repo.commit.slice(0, 12) : "unpinned"}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {capabilityCatalog.isError && <p className="ws-warn mt-3" role="status">Capability catalog details are unavailable; open Memory to retry the live source.</p>}
             </>
           ) : (
             <div role="status">

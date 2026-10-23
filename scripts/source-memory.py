@@ -16,12 +16,63 @@ def connect(path):
     db.execute("""CREATE VIRTUAL TABLE IF NOT EXISTS contexts USING fts5(
         repository, path, context, commit_id UNINDEXED, evidence UNINDEXED,
         url UNINDEXED, checked_at UNINDEXED)""")
+    db.execute("""CREATE TABLE IF NOT EXISTS repository_catalog (
+        repository TEXT PRIMARY KEY,
+        description TEXT NOT NULL,
+        categories TEXT NOT NULL,
+        url TEXT NOT NULL,
+        license_label TEXT NOT NULL,
+        license_approved INTEGER NOT NULL,
+        commit_id TEXT NOT NULL,
+        tracked_files INTEGER,
+        text_files_inspected INTEGER NOT NULL,
+        rea_status TEXT NOT NULL,
+        rea_snapshot_files INTEGER NOT NULL,
+        checked_at TEXT NOT NULL
+    )""")
     return db
 
 
 def ingest(db, catalog, directory, rea_directory=None):
     """Rebuild derived data atomically; no external source can promote trust."""
     rows = []
+    library_path = ROOT / "artifacts/tessera/src/data/source-library.json"
+    library = json.loads(library_path.read_text()) if library_path.exists() else {"records": []}
+    library_by_repo = {item["repository"]: item for item in library.get("records", [])
+                       if isinstance(item, dict) and isinstance(item.get("repository"), str)}
+    catalog_rows = []
+    for item in library_by_repo.values():
+        name = item["repository"]
+        if not re.fullmatch(r"[A-Za-z0-9_-]+/[A-Za-z0-9_.-]+", name):
+            raise ValueError("Invalid repository")
+        commit = item.get("commit", "")
+        if commit and not re.fullmatch(r"[0-9a-f]{40}", commit):
+            raise ValueError("Invalid repository commit")
+        categories = item.get("categories", [])
+        if not isinstance(categories, list) or not all(isinstance(value, str) for value in categories):
+            raise ValueError("Invalid repository categories")
+        tracked_files = item.get("trackedFiles")
+        if tracked_files is not None and (not isinstance(tracked_files, int) or tracked_files < 0):
+            raise ValueError("Invalid tracked file count")
+        inspected = item.get("textFilesInspected", 0)
+        snapshot_files = item.get("reaSnapshotFiles", 0)
+        if not isinstance(inspected, int) or inspected < 0 or not isinstance(snapshot_files, int) or snapshot_files < 0:
+            raise ValueError("Invalid inspection count")
+        catalog_rows.append((
+            name,
+            str(item.get("description", ""))[:2_000],
+            json.dumps(categories, ensure_ascii=False),
+            "https://github.com/" + name,
+            str(item.get("licenseLabel", "UNKNOWN"))[:80],
+            int(item.get("licenseApprovedForIntegration") is True),
+            commit,
+            tracked_files,
+            inspected,
+            str(item.get("reaStatus", "not-reviewed"))[:80],
+            snapshot_files,
+            str(library.get("capturedAt", ""))[:40],
+        ))
+
     rea_file = rea_directory / "summary.json" if rea_directory else None
     rea = {r["repository"]: r for r in json.loads(rea_file.read_text())} if rea_file and rea_file.exists() else {}
     for repo in catalog["repositories"]:
@@ -55,6 +106,11 @@ def ingest(db, catalog, directory, rea_directory=None):
     with db:
         db.execute("DELETE FROM contexts")
         db.executemany("INSERT INTO contexts VALUES (?,?,?,?,?,?,?)", rows)
+        db.execute("DELETE FROM repository_catalog")
+        db.executemany(
+            "INSERT INTO repository_catalog VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            catalog_rows,
+        )
     return len(rows)
 
 
@@ -74,14 +130,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("command", choices=["ingest", "recall"])
     parser.add_argument("query", nargs="*")
+    parser.add_argument("--database", type=Path, default=DATABASE)
     args = parser.parse_args()
-    DATABASE.parent.mkdir(parents=True, exist_ok=True)
-    with connect(DATABASE) as db:
+    args.database.parent.mkdir(parents=True, exist_ok=True)
+    with connect(args.database) as db:
         if args.command == "ingest":
             count = ingest(db, json.loads((ROOT / "docs/repo-intake/catalog.json").read_text()),
                            ROOT / "generated-artifacts/repository-audit",
                            ROOT / "generated-artifacts/rea-analysis")
-            print(json.dumps({"records": count, "storage": str(DATABASE.relative_to(ROOT)),
+            print(json.dumps({"records": count, "repositories": db.execute("SELECT COUNT(*) FROM repository_catalog").fetchone()[0],
+                              "storage": str(args.database.relative_to(ROOT)) if args.database.is_relative_to(ROOT) else str(args.database),
                               "modelTrained": False, "appConnected": False}))
         else:
             print(json.dumps({"mode": "offline-evidence-pointer-lookup", "executionAllowed": False,

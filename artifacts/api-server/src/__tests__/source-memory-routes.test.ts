@@ -33,8 +33,18 @@ beforeAll(async () => {
   process.env.TESSERA_SOURCE_MEMORY_DB = dbPath;
   const db = new DatabaseSync(dbPath);
   db.exec("CREATE VIRTUAL TABLE contexts USING fts5(repository,path,context,commit_id UNINDEXED,evidence UNINDEXED,url UNINDEXED,checked_at UNINDEXED)");
+  db.exec(`CREATE TABLE repository_catalog (
+    repository TEXT PRIMARY KEY, description TEXT NOT NULL, categories TEXT NOT NULL,
+    url TEXT NOT NULL, license_label TEXT NOT NULL, license_approved INTEGER NOT NULL,
+    commit_id TEXT NOT NULL, tracked_files INTEGER, text_files_inspected INTEGER NOT NULL,
+    rea_status TEXT NOT NULL, rea_snapshot_files INTEGER NOT NULL, checked_at TEXT NOT NULL
+  )`);
   db.prepare("INSERT INTO contexts VALUES (?,?,?,?,?,?,?)").run(
     "a/b", "src/tool.ts", "defensive repository context", "c".repeat(40), "metadata-only-untrusted", "https://github.com/a/b", "2026-10-23T00:00:00Z",
+  );
+  db.prepare("INSERT INTO repository_catalog VALUES (?,?,?,?,?,?,?,?,?,?,?,?)").run(
+    "a/b", "defensive repository context", JSON.stringify(["Memory"]), "https://github.com/a/b",
+    "UNKNOWN", 0, "c".repeat(40), 1, 1, "rea-returned", 1, "2026-10-23T00:00:00Z",
   );
   db.close();
 
@@ -68,12 +78,25 @@ describe("owner-only source memory and secret status routes", () => {
   it("returns bounded source-memory evidence to the owner", async () => {
     const status = await fetch(`${baseUrl}/api/source-memory/status`, { headers: { cookie: ownerCookie() } });
     expect(status.status).toBe(200);
-    expect(await status.json()).toMatchObject({ ok: true, available: true, records: 1, modelTrained: false, executionAllowed: false });
+    expect(await status.json()).toMatchObject({
+      ok: true, available: true, records: 1, repositories: 1, catalogRecords: 1, reaSnapshots: 1,
+      modelTrained: false, executionAllowed: false, externalStorageSynced: false,
+    });
 
     const search = await fetch(`${baseUrl}/api/source-memory/search?q=defensive`, { headers: { cookie: ownerCookie() } });
     expect(search.status).toBe(200);
     const body = await search.json() as { results?: Array<{ repository?: string; evidence?: string }> };
     expect(body.results?.[0]).toMatchObject({ repository: "a/b", evidence: "metadata-only-untrusted" });
+
+    const catalog = await fetch(`${baseUrl}/api/source-memory/catalog?category=Memory`, { headers: { cookie: ownerCookie() } });
+    expect(catalog.status).toBe(200);
+    expect(await catalog.json()).toMatchObject({
+      ok: true,
+      total: 1,
+      records: [{ repository: "a/b", commit: "c".repeat(40), installed: false, executed: false }],
+    });
+    const rejectedCategory = await fetch(`${baseUrl}/api/source-memory/catalog?category=DOX%20%2F%20osint`, { headers: { cookie: ownerCookie() } });
+    expect(rejectedCategory.status).toBe(400);
   });
 
   it("returns secret existence and purpose, never values", async () => {

@@ -20,3 +20,4 @@
 - [Frontend test transforms](frontend-test-transforms.md) — test runners can use a newer Vite than the app; configure the active JSX transformer.
 - [Historical chat authorship](tessera-chat-authorship.md) — use each reply’s final generation metadata, never today’s provider or a neighboring reply, to identify its model or local path.
 - [Task completion evidence](task-completion-evidence.md) — report only deliverables verified against code, tests, or runtime; distinguish mocked, live, blocked, and failed checks.
+- [Orval and Zod compatibility](orval-zod3-runtime-compat.md) — generated validators can compile yet crash at startup when Orval targets a newer Zod API than the server installs.
