@@ -1507,6 +1507,70 @@
         "surveillance",
         "whistleblowing"
       ]
+    },
+    {
+      "repository": "Panniantong/Agent-Reach",
+      "url": "https://github.com/Panniantong/Agent-Reach",
+      "categories": [
+        "Web access"
+      ],
+      "mentions": 1,
+      "installed": false,
+      "executed": false,
+      "evidence": "github-metadata-only",
+      "sourceCodeRead": false,
+      "checkedAt": "2026-10-23T03:16:01.760Z",
+      "api": "https://api.github.com/repos/Panniantong/Agent-Reach",
+      "status": "metadata-read",
+      "description": "Give your AI agent eyes to see the entire internet. Read & search Twitter, Reddit, YouTube, GitHub, Bilibili, XiaoHongShu — one CLI, zero API fees.",
+      "defaultBranch": "main",
+      "license": "MIT",
+      "licenseReviewed": false,
+      "archived": false,
+      "topics": [
+        "agent-infrastructure",
+        "ai-agent",
+        "ai-search",
+        "automation",
+        "bilibili",
+        "claude-code",
+        "cli",
+        "cursor",
+        "free-api",
+        "llm-tools",
+        "mcp",
+        "python",
+        "reddit-scraper",
+        "twitter-scraper",
+        "web-scraper",
+        "xiaohongshu",
+        "youtube-transcript"
+      ]
+    },
+    {
+      "repository": "p-e-w/heretic",
+      "url": "https://github.com/p-e-w/heretic",
+      "categories": [
+        "Model-weight research"
+      ],
+      "mentions": 1,
+      "installed": false,
+      "executed": false,
+      "evidence": "github-metadata-only",
+      "sourceCodeRead": false,
+      "checkedAt": "2026-10-23T03:16:01.994Z",
+      "api": "https://api.github.com/repos/p-e-w/heretic",
+      "status": "metadata-read",
+      "description": "Fully automatic censorship removal for language models",
+      "defaultBranch": "master",
+      "license": "AGPL-3.0",
+      "licenseReviewed": false,
+      "archived": false,
+      "topics": [
+        "abliteration",
+        "llm",
+        "transformer"
+      ]
     }
   ]
 }

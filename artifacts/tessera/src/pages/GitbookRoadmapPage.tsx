@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { AlertTriangle, BookOpen, ExternalLink, RefreshCw, Send, ShieldCheck } from "lucide-react";
+import SourceLibrary from "@/components/SourceLibrary";
 
 type GitbookTask = {
   id: string;
@@ -163,6 +164,8 @@ export default function GitbookRoadmapPage() {
             </>
           ) : null}
         </section>
+
+        <SourceLibrary />
 
         {roadmap.data ? (
           <>

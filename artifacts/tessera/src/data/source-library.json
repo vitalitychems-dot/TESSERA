@@ -1,0 +1,797 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-23T03:29:19Z",
+  "scope": "Public-source reference library. Static inspection is not a security review, training, or operational installation.",
+  "reaDevelopmentOnly": true,
+  "modelTrained": false,
+  "externalStorageSynced": false,
+  "records": [
+    {
+      "repository": "morluto/rea",
+      "url": "https://github.com/morluto/rea",
+      "description": "Reverse engineer anything with agents, from app behavior down to native binaries.",
+      "categories": [
+        "analysis toolkit"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "9eb829aca34be36ff112826337996f6139f82eff",
+      "trackedFiles": 5528,
+      "textFilesInspected": 5499,
+      "reaStatus": "rea-timeout",
+      "reaSnapshotFiles": 4747,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "calesthio/OpenMontage",
+      "url": "https://github.com/calesthio/OpenMontage",
+      "description": "World's first open-source, agentic video production system. 12 production pipelines, 100+ tools, 700+ agent skill and production-knowledge files. Turn your AI coding assistant into a full video production studio.",
+      "categories": [
+        "Free text to video"
+      ],
+      "licenseLabel": "AGPL-3.0",
+      "licenseApprovedForIntegration": false,
+      "commit": "c8066452325cb57c8fc1ba8c2a71b6e8842e6b65",
+      "trackedFiles": 2171,
+      "textFilesInspected": 2033,
+      "reaStatus": "rea-failed",
+      "reaSnapshotFiles": 204,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "Hack-with-Github/Awesome-Hacking",
+      "url": "https://github.com/Hack-with-Github/Awesome-Hacking",
+      "description": "A collection of various awesome lists for hackers, pentesters and security researchers",
+      "categories": [
+        "Hacking defense resersch"
+      ],
+      "licenseLabel": "CC0-1.0",
+      "licenseApprovedForIntegration": false,
+      "commit": "b2bb13aa69b4f568a1bab0cbb17b7a00a350dc36",
+      "trackedFiles": 5,
+      "textFilesInspected": 4,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 0,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "HKUDS/ViMax",
+      "url": "https://github.com/HKUDS/ViMax",
+      "description": "\"ViMax: Agentic Video Generation (Director, Screenwriter, Producer, and Video Generator All-in-One)\"",
+      "categories": [
+        "Video generator"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "fd4b72e7731be6e5f88486206d25ea59849b0285",
+      "trackedFiles": 188,
+      "textFilesInspected": 186,
+      "reaStatus": "rea-returned",
+      "reaSnapshotFiles": 70,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "pathwaycom/arc-task-gen",
+      "url": "https://github.com/pathwaycom/arc-task-gen",
+      "description": "Generates original ARC-AGI-1-style tasks distribution-matched to the public eval set.",
+      "categories": [
+        "Agi"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "20b2203064b09f60f7925a191d75c11d72277f35",
+      "trackedFiles": 13,
+      "textFilesInspected": 12,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 0,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "TransformerOptimus/SuperAGI",
+      "url": "https://github.com/TransformerOptimus/SuperAGI",
+      "description": "<\u26a1\ufe0f> SuperAGI - A dev-first open source autonomous AI agent framework. Enabling developers to build, manage & run useful autonomous agents quickly and reliably.",
+      "categories": [
+        "Agi"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "c3c1982e7bd6a11cfed53c5a193ea502f924b1b6",
+      "trackedFiles": 771,
+      "textFilesInspected": 751,
+      "reaStatus": "rea-returned",
+      "reaSnapshotFiles": 64,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "joeynyc/hermes-hudui",
+      "url": "https://github.com/joeynyc/hermes-hudui",
+      "description": "Web UI consciousness monitor for Hermes \u2014 the AI agent with persistent memory",
+      "categories": [
+        "Consciousness"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "be83208f48b7a1c67b7816837c8df71a61ef7edf",
+      "trackedFiles": 209,
+      "textFilesInspected": 201,
+      "reaStatus": "rea-failed",
+      "reaSnapshotFiles": 75,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "NousResearch/hermes-agent",
+      "url": "https://github.com/NousResearch/hermes-agent",
+      "description": "The agent that grows with you",
+      "categories": [
+        "Consciousness"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "bf0203a794a07aac3ff764972ab9087baa4e4f4e",
+      "trackedFiles": 20799,
+      "textFilesInspected": 20614,
+      "reaStatus": "rea-timeout",
+      "reaSnapshotFiles": 5393,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "nesquena/hermes-webui",
+      "url": "https://github.com/nesquena/hermes-webui",
+      "description": "Hermes WebUI: The best way to use Hermes Agent from the web or from your phone!",
+      "categories": [
+        "Consciousness"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "fe05f1bb263e2d6cbafed7ff3bde037618dcee56",
+      "trackedFiles": 2329,
+      "textFilesInspected": 1998,
+      "reaStatus": "rea-failed",
+      "reaSnapshotFiles": 31,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "koala73/worldmonitor",
+      "url": "https://github.com/koala73/worldmonitor",
+      "description": "Real-time global intelligence dashboard. AI-powered news aggregation, geopolitical monitoring, and infrastructure tracking in a unified situational awareness interface",
+      "categories": [
+        "Anti surveillance"
+      ],
+      "licenseLabel": "AGPL-3.0",
+      "licenseApprovedForIntegration": false,
+      "commit": "d407ac11f42b9f15607af0c17b07af052cc03509",
+      "trackedFiles": 8649,
+      "textFilesInspected": 8215,
+      "reaStatus": "rea-timeout",
+      "reaSnapshotFiles": 4216,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "calesthio/Crucix",
+      "url": "https://github.com/calesthio/Crucix",
+      "description": "Your personal intelligence agent. Watches the world from multiple data sources and pings you when something changes.",
+      "categories": [
+        "Anti surveillance"
+      ],
+      "licenseLabel": "AGPL-3.0",
+      "licenseApprovedForIntegration": false,
+      "commit": "3db7068817e0c815df353fa0f19657c85142789d",
+      "trackedFiles": 93,
+      "textFilesInspected": 89,
+      "reaStatus": "rea-returned",
+      "reaSnapshotFiles": 69,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "jivoi/awesome-osint",
+      "url": "https://github.com/jivoi/awesome-osint",
+      "description": ":scream: A curated list of amazingly awesome OSINT",
+      "categories": [
+        "Anti surveillance"
+      ],
+      "licenseLabel": "NOASSERTION",
+      "licenseApprovedForIntegration": false,
+      "commit": "7fffcabdaa795bf2f17f0c90a5f072d8781a252c",
+      "trackedFiles": 5,
+      "textFilesInspected": 4,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 0,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "laramies/theHarvester",
+      "url": "https://github.com/laramies/theHarvester",
+      "description": "E-mails, subdomains and names Harvester - OSINT ",
+      "categories": [
+        "Anti surveillance"
+      ],
+      "licenseLabel": "GPL-2.0",
+      "licenseApprovedForIntegration": false,
+      "commit": "6790b147f52309e4eee22ed941db1d285ab2ec23",
+      "trackedFiles": 316,
+      "textFilesInspected": 313,
+      "reaStatus": "rea-failed",
+      "reaSnapshotFiles": 2,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "smicallef/spiderfoot",
+      "url": "https://github.com/smicallef/spiderfoot",
+      "description": "SpiderFoot automates OSINT for threat intelligence and mapping your attack surface.",
+      "categories": [
+        "Anti surveillance"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "0f815a203afebf05c98b605dba5cf0475a0ee5fd",
+      "trackedFiles": 817,
+      "textFilesInspected": 807,
+      "reaStatus": "rea-failed",
+      "reaSnapshotFiles": 18,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "lissy93/web-check",
+      "url": "https://github.com/lissy93/web-check",
+      "description": "\ud83d\udd75\ufe0f\u200d\u2642\ufe0f All-in-one OSINT tool for analysing any website",
+      "categories": [
+        "Anti surveillance"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "8363de175359c067628d306ac3cd438a18b2c2aa",
+      "trackedFiles": 395,
+      "textFilesInspected": 328,
+      "reaStatus": "rea-returned",
+      "reaSnapshotFiles": 228,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "simplifaisoul/osiris",
+      "url": "https://github.com/simplifaisoul/osiris",
+      "description": "Open Source Global Intelligence Platform - Real-Time OSINT Dashboard - A Palantir Alternative -                            2nZNHm3Lr9umG3DVrzYwHgktwkuKuJRXqqRqs3ewpump ",
+      "categories": [
+        "Anti surveillance"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "fe46849c7946da5b17f6c4df99b9c30efc6cbaac",
+      "trackedFiles": 1143,
+      "textFilesInspected": 1108,
+      "reaStatus": "rea-failed",
+      "reaSnapshotFiles": 843,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "OpenCTI-Platform/opencti",
+      "url": "https://github.com/OpenCTI-Platform/opencti",
+      "description": "Open Cyber Threat Intelligence Platform",
+      "categories": [
+        "Anti surveillance"
+      ],
+      "licenseLabel": "NOASSERTION",
+      "licenseApprovedForIntegration": false,
+      "commit": "029dd999eb8a8b749d97247d1cac5e81612c9bd4",
+      "trackedFiles": 7123,
+      "textFilesInspected": 6409,
+      "reaStatus": "rea-timeout",
+      "reaSnapshotFiles": 5345,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "owasp-amass/amass",
+      "url": "https://github.com/owasp-amass/amass",
+      "description": "In-depth attack surface mapping and asset discovery",
+      "categories": [
+        "Anti surveillance"
+      ],
+      "licenseLabel": "NOASSERTION",
+      "licenseApprovedForIntegration": false,
+      "commit": "79299dce87b0085db0f2f4ef3e9c52cccb49f514",
+      "trackedFiles": 224,
+      "textFilesInspected": 224,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 0,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "ruvnet/RuView",
+      "url": "https://github.com/ruvnet/RuView",
+      "description": "\u03c0 RuView turns commodity WiFi signals into real-time spatial intelligence, vital sign monitoring, and presence detection \u2014 all without a single pixel of video.",
+      "categories": [
+        "Anti surveillance",
+        "WIFI mapping"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "fefb0f918eefa7db6daef8cc83787fc7d6f74187",
+      "trackedFiles": 3828,
+      "textFilesInspected": 3721,
+      "reaStatus": "rea-timeout",
+      "reaSnapshotFiles": 729,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "SparrowMap/sparrowmap",
+      "url": "https://github.com/SparrowMap/sparrowmap",
+      "description": "A system for an open, public record of government vehicles on public roads, run by volunteers. Private number plates are destroyed on the camera and are never stored.",
+      "categories": [
+        "Anti surveillance"
+      ],
+      "licenseLabel": "AGPL-3.0",
+      "licenseApprovedForIntegration": false,
+      "commit": "f24161c5b5462667ff48f105b83a9ef4366676db",
+      "trackedFiles": 401,
+      "textFilesInspected": 381,
+      "reaStatus": "rea-returned",
+      "reaSnapshotFiles": 42,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "Ullaakut/cameradar",
+      "url": "https://github.com/Ullaakut/cameradar",
+      "description": "Cameradar hacks its way into RTSP videosurveillance cameras",
+      "categories": [
+        "Anti surveillance"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "b214998998521c77bbe9bfd2e061ec9e994399ce",
+      "trackedFiles": 83,
+      "textFilesInspected": 80,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 1,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "bilawalsidhu/gods-eye-view",
+      "url": "https://github.com/bilawalsidhu/gods-eye-view",
+      "description": "A spy satellite simulator in your browser, except the data is real. Live open source spatial intelligence on a photorealistic 3D globe.",
+      "categories": [
+        "Anti surveillance"
+      ],
+      "licenseLabel": "NOASSERTION",
+      "licenseApprovedForIntegration": false,
+      "commit": "5d95e9adc496223a99a5b92de3b78f915bdf2f30",
+      "trackedFiles": 2193,
+      "textFilesInspected": 2130,
+      "reaStatus": "rea-timeout",
+      "reaSnapshotFiles": 1943,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "D4Vinci/Scrapling",
+      "url": "https://github.com/D4Vinci/Scrapling",
+      "description": "\ud83d\udd77\ufe0f A Web Scraping framework that handles everything from a single request to a full-scale crawl! Don't be shy, join here: https://discord.gg/EMgGbDceNQ and follow here for daily tips and tricks: https://x.com/Scrapling_dev",
+      "categories": [
+        "Scraping"
+      ],
+      "licenseLabel": "BSD-3-Clause",
+      "licenseApprovedForIntegration": false,
+      "commit": "82180a1b3e1835888e4e90bee44963179f1e1ca0",
+      "trackedFiles": 688,
+      "textFilesInspected": 646,
+      "reaStatus": "rea-returned",
+      "reaSnapshotFiles": 2,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "scrapy/scrapy",
+      "url": "https://github.com/scrapy/scrapy",
+      "description": "Scrapy, a fast high-level web crawling & scraping framework for Python.",
+      "categories": [
+        "Scraping"
+      ],
+      "licenseLabel": "BSD-3-Clause",
+      "licenseApprovedForIntegration": false,
+      "commit": "171ccbedb734c988fd86708fd5e0803029b6c730",
+      "trackedFiles": 738,
+      "textFilesInspected": 705,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 0,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "soimort/you-get",
+      "url": "https://github.com/soimort/you-get",
+      "description": ":arrow_double_down: Dumb downloader that scrapes the web",
+      "categories": [
+        "Scraping"
+      ],
+      "licenseLabel": "NOASSERTION",
+      "licenseApprovedForIntegration": false,
+      "commit": "049548f3f3f35e67ba8d3181c71fdc71d11cf260",
+      "trackedFiles": 155,
+      "textFilesInspected": 155,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 1,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "garrytan/gbrain",
+      "url": "https://github.com/garrytan/gbrain",
+      "description": "Garry's Opinionated OpenClaw/Hermes Agent Brain",
+      "categories": [
+        "Memory"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "df2cfcd24dd4afa0eddb61143fe1729db1a59fdd",
+      "trackedFiles": 12946,
+      "textFilesInspected": 12882,
+      "reaStatus": "rea-failed",
+      "reaSnapshotFiles": 6922,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "BigBodyCobain/Shadowbroker",
+      "url": "https://github.com/BigBodyCobain/Shadowbroker",
+      "description": "Open-source intelligence for the global theater. Track everything from the corporate/private jets of the wealthy, and spy satellites, to seismic events in one unified interface. Hook an AI agent up to have it parse through data and find previously unseen correlations. The knowledge is available to all but rarely aggregated in the open, until now.",
+      "categories": [
+        "Anti l/ Spy",
+        "DOX / osint",
+        "Security"
+      ],
+      "licenseLabel": "AGPL-3.0",
+      "licenseApprovedForIntegration": false,
+      "commit": "d110c9325e629cce9a111c3800ddb2b8567b2497",
+      "trackedFiles": 1222,
+      "textFilesInspected": 1190,
+      "reaStatus": "rea-returned",
+      "reaSnapshotFiles": 413,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "actionbook/actionbook",
+      "url": "https://github.com/actionbook/actionbook",
+      "description": "Let your AI agent get the sources behind logins and paywalls.",
+      "categories": [
+        "Leading and research training tools"
+      ],
+      "licenseLabel": "Apache-2.0",
+      "licenseApprovedForIntegration": false,
+      "commit": "20ed5b510ecbeee1cc7bf6861fc1d450eefe21d6",
+      "trackedFiles": 543,
+      "textFilesInspected": 539,
+      "reaStatus": "rea-returned",
+      "reaSnapshotFiles": 181,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "FlareSolverr/FlareSolverr",
+      "url": "https://github.com/FlareSolverr/FlareSolverr",
+      "description": "Proxy server to bypass Cloudflare protection",
+      "categories": [
+        "Leading and research training tools"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "a96b2c4644fff43b67bccdbe5853bef7c4df95e6",
+      "trackedFiles": 45,
+      "textFilesInspected": 43,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 1,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "brannondorsey/wifi-cracking",
+      "url": "https://github.com/brannondorsey/wifi-cracking",
+      "description": "Crack WPA/WPA2 Wi-Fi Routers with Airodump-ng and Aircrack-ng/Hashcat",
+      "categories": [
+        "WiFi defense"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "3485af20e5255be5b2a27aceec56b0c771c56e81",
+      "trackedFiles": 7,
+      "textFilesInspected": 7,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 0,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "bettercap/bettercap",
+      "url": "https://github.com/bettercap/bettercap",
+      "description": "The Swiss Army knife for 802.11, BLE, HID, CAN-bus, IPv4 and IPv6 networks reconnaissance and MITM attacks.",
+      "categories": [
+        "WiFi defense"
+      ],
+      "licenseLabel": "NOASSERTION",
+      "licenseApprovedForIntegration": false,
+      "commit": "8eca2820f3c41d2004434ed5a291d87462caeeb7",
+      "trackedFiles": 2033,
+      "textFilesInspected": 1985,
+      "reaStatus": "rea-returned",
+      "reaSnapshotFiles": 12,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "wifiphisher/wifiphisher",
+      "url": "https://github.com/wifiphisher/wifiphisher",
+      "description": "The Rogue Access Point Framework",
+      "categories": [
+        "WiFi defense"
+      ],
+      "licenseLabel": "GPL-3.0",
+      "licenseApprovedForIntegration": false,
+      "commit": "4ae336518bf29eed13d3b09f2ee6a16e7973c997",
+      "trackedFiles": 134,
+      "textFilesInspected": 112,
+      "reaStatus": "rea-failed",
+      "reaSnapshotFiles": 16,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "sundowndev/phoneinfoga",
+      "url": "https://github.com/sundowndev/phoneinfoga",
+      "description": "Information gathering framework for phone numbers",
+      "categories": [
+        "DOX / osint"
+      ],
+      "licenseLabel": "GPL-3.0",
+      "licenseApprovedForIntegration": false,
+      "commit": "55807b05b753dab7bc6fe67403ca385668dda179",
+      "trackedFiles": 155,
+      "textFilesInspected": 149,
+      "reaStatus": "rea-returned",
+      "reaSnapshotFiles": 20,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "soxoj/maigret",
+      "url": "https://github.com/soxoj/maigret",
+      "description": "\ud83d\udd75\ufe0f\u200d\u2642\ufe0f Collect a dossier on a person by username from 6K websites",
+      "categories": [
+        "DOX / osint"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "a42b4ae03871e335770fc4be55f6d2639aec45b7",
+      "trackedFiles": 190,
+      "textFilesInspected": 178,
+      "reaStatus": "rea-returned",
+      "reaSnapshotFiles": 5,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "HunxByts/GhostTrack",
+      "url": "https://github.com/HunxByts/GhostTrack",
+      "description": "Useful tool to track location or mobile number",
+      "categories": [
+        "DOX / osint"
+      ],
+      "licenseLabel": "unknown",
+      "licenseApprovedForIntegration": false,
+      "commit": "a5cb8ad4c08acd803f166fb067b7dac724d6cb3d",
+      "trackedFiles": 8,
+      "textFilesInspected": 4,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 0,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "blacklanternsecurity/bbot",
+      "url": "https://github.com/blacklanternsecurity/bbot",
+      "description": "The recursive internet scanner for hackers. \ud83e\udde1",
+      "categories": [
+        "DOX / osint"
+      ],
+      "licenseLabel": "AGPL-3.0",
+      "licenseApprovedForIntegration": false,
+      "commit": "a6fb827bb144cdb85b52e142a4d6e14ed5f94b69",
+      "trackedFiles": 609,
+      "textFilesInspected": 600,
+      "reaStatus": "rea-failed",
+      "reaSnapshotFiles": 8,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "sherlock-project/sherlock",
+      "url": "https://github.com/sherlock-project/sherlock",
+      "description": "Hunt down social media accounts by username across social networks",
+      "categories": [
+        "DOX / osint"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "e40a45ec2a074b90703b3b4b842c8a3adbd6ada3",
+      "trackedFiles": 56,
+      "textFilesInspected": 51,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 5,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "claudiodangelis/qrcp",
+      "url": "https://github.com/claudiodangelis/qrcp",
+      "description": ":zap: Transfer files over wifi from your computer to your mobile device by scanning a QR code without leaving the terminal.",
+      "categories": [
+        "Data transfer"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "2759e61c5ec9d3976fed7acc74049a34110b245f",
+      "trackedFiles": 51,
+      "textFilesInspected": 47,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 0,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "privacytools/privacytools.io",
+      "url": "https://github.com/privacytools/privacytools.io",
+      "description": "\ud83d\udee1\ud83d\udee0 You are being watched. Protect your privacy against global mass surveillance.",
+      "categories": [
+        "Security"
+      ],
+      "licenseLabel": "CC0-1.0",
+      "licenseApprovedForIntegration": false,
+      "commit": "b8661944ee9f8fdd8c9f0ba2e31391e3cec522c3",
+      "trackedFiles": 635,
+      "textFilesInspected": 561,
+      "reaStatus": "rea-returned",
+      "reaSnapshotFiles": 8,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "roflcoopter/viseron",
+      "url": "https://github.com/roflcoopter/viseron",
+      "description": "Self-hosted, local only NVR and AI Computer Vision software.  With features such as object detection, motion detection, face recognition and more, it gives you the power to keep an eye on your home, office or any other place you want to monitor.",
+      "categories": [
+        "Security"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "02a3b446e2acbed37c47df701403988cdd6cb1bd",
+      "trackedFiles": 1135,
+      "textFilesInspected": 1060,
+      "reaStatus": "rea-returned",
+      "reaSnapshotFiles": 406,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "smittix/intercept",
+      "url": "https://github.com/smittix/intercept",
+      "description": "iNTERCEPT, a free and open-source platform that unites the best signal intelligence tools into a single, accessible interface.",
+      "categories": [
+        "Security"
+      ],
+      "licenseLabel": "Apache-2.0",
+      "licenseApprovedForIntegration": false,
+      "commit": "43c655d5de7f60def81588de4150fae052482469",
+      "trackedFiles": 663,
+      "textFilesInspected": 608,
+      "reaStatus": "rea-returned",
+      "reaSnapshotFiles": 100,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "tigthor/NSA-CIA-Blocklist",
+      "url": "https://github.com/tigthor/NSA-CIA-Blocklist",
+      "description": "This is the github repository for all NSA and CIA spying servers, including those revealed by Edward Snowden and other studies we conducted on the whole world's servers, enumerating those that spy on individuals and sell data to the NSA and CIA.",
+      "categories": [
+        "Security"
+      ],
+      "licenseLabel": "NOASSERTION",
+      "licenseApprovedForIntegration": false,
+      "commit": "82c61ea1e2c0ab22362e0745d2de87bee8518a02",
+      "trackedFiles": 16,
+      "textFilesInspected": 15,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 0,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "mukul975/Anthropic-Cybersecurity-Skills",
+      "url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
+      "description": "817 structured cybersecurity skills for AI agents \u00b7 Mapped to 6 frameworks: MITRE ATT&CK, NIST CSF 2.0, MITRE ATLAS, D3FEND, NIST AI RMF & MITRE F3 (Fight Fraud) \u00b7 agentskills.io standard \u00b7 Works with Claude Code, GitHub Copilot, Codex CLI, Cursor, Gemini CLI & 20+ platforms \u00b7 29 security domains \u00b7 Apache 2.0",
+      "categories": [
+        "Security"
+      ],
+      "licenseLabel": "Apache-2.0",
+      "licenseApprovedForIntegration": false,
+      "commit": "54a798831d2266a3ca61ce68a7acb80b81160d57",
+      "trackedFiles": 4532,
+      "textFilesInspected": 4531,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 7,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "aforensics/HiddenVM",
+      "url": "https://github.com/aforensics/HiddenVM",
+      "description": "HiddenVM \u2014 Use any desktop OS without leaving a trace.",
+      "categories": [
+        "Security"
+      ],
+      "licenseLabel": "GPL-3.0",
+      "licenseApprovedForIntegration": false,
+      "commit": "4f7e932098d6284b55b1785b167433405af05abd",
+      "trackedFiles": 32,
+      "textFilesInspected": 32,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 0,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "therealjameswilson/Clinton-NATO-Expansion-Documents",
+      "url": "https://github.com/therealjameswilson/Clinton-NATO-Expansion-Documents",
+      "description": "Public workbench for a 1000-page declassified primary-document package on NATO expansion during the Clinton administration, 1993-2000.",
+      "categories": [
+        "Foia"
+      ],
+      "licenseLabel": "unknown",
+      "licenseApprovedForIntegration": false,
+      "commit": "288c5e5fac6bff9cb210d400f12aeb343d26f040",
+      "trackedFiles": 51,
+      "textFilesInspected": 49,
+      "reaStatus": "rea-returned",
+      "reaSnapshotFiles": 23,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "defaultnamehere/zzzzz",
+      "url": "https://github.com/defaultnamehere/zzzzz",
+      "description": "Roleplay as the NSA by making creepy graphs of your friends",
+      "categories": [
+        "Foia"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "34a2e2ab4f3188e9b457fc511d9b724280dd2238",
+      "trackedFiles": 16,
+      "textFilesInspected": 16,
+      "reaStatus": "rea-failed",
+      "reaSnapshotFiles": 1,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "iamcryptoki/snowden-archive",
+      "url": "https://github.com/iamcryptoki/snowden-archive",
+      "description": "\ud83d\udca5 A collection of all documents leaked by former NSA contractor and whistleblower Edward Snowden.",
+      "categories": [
+        "Foia"
+      ],
+      "licenseLabel": "unknown",
+      "licenseApprovedForIntegration": false,
+      "commit": "7d31c608baff3cdf72af8e24595327438f54cda0",
+      "trackedFiles": 478,
+      "textFilesInspected": 3,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 0,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "Panniantong/Agent-Reach",
+      "url": "https://github.com/Panniantong/Agent-Reach",
+      "description": "Give your AI agent eyes to see the entire internet. Read & search Twitter, Reddit, YouTube, GitHub, Bilibili, XiaoHongShu \u2014 one CLI, zero API fees.",
+      "categories": [
+        "Web access"
+      ],
+      "licenseLabel": "MIT",
+      "licenseApprovedForIntegration": false,
+      "commit": "94f06c1969dfc1834001269d79d3ad0972d9dee6",
+      "trackedFiles": null,
+      "textFilesInspected": 0,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 1,
+      "operationallyInstalled": false
+    },
+    {
+      "repository": "p-e-w/heretic",
+      "url": "https://github.com/p-e-w/heretic",
+      "description": "Fully automatic censorship removal for language models",
+      "categories": [
+        "Model-weight research"
+      ],
+      "licenseLabel": "AGPL-3.0",
+      "licenseApprovedForIntegration": false,
+      "commit": "09271b620229c469d51fcdcbd57911a0cfdb72bf",
+      "trackedFiles": null,
+      "textFilesInspected": 0,
+      "reaStatus": "unsupported-no-javascript",
+      "reaSnapshotFiles": 0,
+      "operationallyInstalled": false
+    }
+  ]
+}

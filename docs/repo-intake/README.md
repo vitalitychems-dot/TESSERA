@@ -90,7 +90,57 @@ call an LLM or authorize execution. A blob mismatch is an unverified-content
 state, not a finding of malicious modification: Git archive export substitutions
 or LFS expansion can also change archive bytes relative to Git blobs.
 
-REA execution remains separate. Upstream `rea-agents@6.7.0` declares MIT, but its
-runtime dependency `openpgp@6.3.2` declares LGPL-3.0+. The project's dependency
-license policy requires review before adopting conditional/copyleft dependencies.
-No REA package was installed or run during this file-coverage pass.
+REA execution remains separate from file coverage. The owner approved
+`rea-agents@6.7.0` (MIT), including its `openpgp@6.3.2` LGPL-3.0+ dependency,
+for development-only GitHub repository analysis. It is pinned in the scripts
+package's devDependencies, installed with lifecycle scripts disabled, and is not
+imported by the application. It is not a production service.
+
+The subsequent REA batch is run with:
+
+```sh
+python3 scripts/run-rea-repositories.py
+```
+
+Its ledger is `generated-artifacts/rea-analysis/summary.json`; only entries in
+that ledger establish actual attempted runs. It materializes bounded JS/TS/JSON
+source from pinned Git objects in temporary directories and invokes REA's static
+JavaScript analyzer. Other languages are not semantically covered. Each run has a
+60-second process budget; a timeout or partial result is not a successful review.
+No target package scripts, installers, applications or offensive tools are run.
+
+## Offline context pointers
+
+```sh
+python3 scripts/source-memory.py ingest
+python3 scripts/source-memory.py recall "video generation"
+python3 scripts/source-memory.test.py
+```
+
+This creates a derived local SQLite full-text index of repository metadata and
+file pointers. Records retain their source, commit, read status and timestamp.
+Inputs remain untrusted and cannot grant execution permission. SQL values are
+parameterized and search input is converted to quoted tokens. The index does not
+contain source bodies or trained model weights. It is not yet connected to
+Tessera chat, GitMesh, Combined or memory-flowsint.
+
+The install-time workspace audit reported 1 critical, 3 high, 9 moderate and
+3 low advisories in existing app/tooling dependencies; none of its reported
+dependency paths contained REA. This is not a clean release/security sign-off.
+
+## In-app reference library
+
+The Gitbook page includes a searchable reference library and JSON export. It
+bundles only a small public-metadata snapshot, not upstream source code or REA.
+Refresh it deliberately from recorded evidence:
+
+```sh
+python3 scripts/export-source-library.py
+python3 scripts/export-source-library.test.py
+```
+
+The snapshot timestamp is visible. Background analysis does not automatically
+change a published snapshot. An export is a reference catalog for local use,
+not an installer, model, or portable copy of the upstream projects. No private
+GitHub information, runtime credentials, raw REA source excerpts, or active
+tool permissions are included.

@@ -20,3 +20,9 @@ The owner wants the named Eye projects combined using their original data provid
 **Why:** The owner explicitly requested direct source data and said to include projects even when they cannot run.
 
 **How to apply:** Separate installed/executed components, connected providers, reference collections, and blocked components. Source links or a successful repository lookup are not evidence that a runtime or feed is active.
+
+**REA scope:** The owner approved REA and its LGPL dependency for development-only analysis of GitHub repositories, explicitly excluding it from the published application.
+
+**Why:** This was the owner's explicit approval condition, not permission for unrestricted tool execution.
+
+**How to apply:** Keep REA out of app runtime imports and production services. Analyze bounded GitHub source snapshots only; do not use it against local applications, devices, or unrelated targets. Preserve source evidence separately from trusted app memory.
