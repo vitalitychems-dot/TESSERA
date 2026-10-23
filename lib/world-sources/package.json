@@ -1,0 +1,16 @@
+{
+  "name": "@workspace/world-sources",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./index.mjs",
+    "./memory-seed": "./memory-seed.mjs"
+  },
+  "scripts": {
+    "test": "node --test test.mjs",
+    "snapshot": "node cli.mjs"
+  },
+  "engines": { "node": ">=22.13" }
+}

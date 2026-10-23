@@ -1,0 +1,38 @@
+{
+  "tool": "rea-agents",
+  "version": "6.7.0",
+  "repository": "https://github.com/morluto/rea",
+  "license": "MIT",
+  "operation": "analyze-javascript-application",
+  "captureDate": "2026-10-23",
+  "scope": "clean reviewed source-only application copy, excluding node_modules, compiled output, caches and credentials",
+  "evidenceId": "ev_8dea20ab8276df3a73a80067a18629a3e681559ecfbfd3d32c7a45e15f281eb3",
+  "evidenceSha256": "8fc758cdcbd5d06249f2f02e8c88ebabfe5acecab1d0c6e41f5a6359d2b0b6e7",
+  "sourceArtifactSha256": "d8b2b9101d2a4220aac5e630e5a6b9bd9015ec553acfd95717a71700ebfb41a5",
+  "statistics": {
+    "relevantFiles": 1956,
+    "textBytesRead": 37716647,
+    "parsedJavaScriptFiles": 1912,
+    "skippedJavaScriptFiles": 0,
+    "invalidUtf8Files": 0,
+    "parseFailures": 0,
+    "visitedAstNodes": 2595283,
+    "findings": 9510,
+    "applicationGraphNodes": 6299,
+    "applicationGraphEdges": 6524,
+    "semanticNodes": 63640,
+    "semanticRelations": 54255,
+    "semanticUnknowns": 44213,
+    "limitations": 3707,
+    "resourceConstraintLimitations": 3698
+  },
+  "limitations": [
+    "Static inert-syntax analysis does not prove runtime execution, enforcement or reachability.",
+    "Graph coverage is incomplete; unknown relationships must not be read as absent.",
+    "Parent result budgets constrained expanded relationships and semantic analysis for many files.",
+    "Inline JavaScript in tools/cesium-render.html was not analyzed.",
+    "This receipt is a summary, not the complete canonical evidence bundle.",
+    "The canonical evidence is a generated 159969636-byte local artifact; it was not committed as an oversized Git blob.",
+    "No feature-complete independent rewrite, live Tessera ingestion, model training or successful phone globe render is asserted."
+  ]
+}
