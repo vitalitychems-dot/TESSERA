@@ -16,7 +16,7 @@ test("one pass keeps more than one page and the next path is new", async () => {
     .split("\n")
     .map((line) => JSON.parse(line) as KeptPage);
   const before = 10;
-  assert.equal(notes.length, 15);
+  assert.equal(notes.length, 68);
   assert.equal(notes.length - before > 1, true);
   const q = "what does the brainstorming page require first";
   assert.equal(noteFor(q, notes), notes[14].fact);
@@ -32,7 +32,7 @@ test("one pass keeps more than one page and the next path is new", async () => {
   );
   assert.match(after, /\.(md|txt)$/);
   const told = herInstruction(before, notes.length);
-  assert.match(told, /from 10 to 15/);
+  assert.match(told, /from 10 to 68/);
   assert.match(told, /more than one unread text page/);
   assert.match(told, /Do not fetch trees in parallel/);
 });
