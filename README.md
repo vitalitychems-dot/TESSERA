@@ -99,6 +99,8 @@ Batch commits and run `pnpm test` and gitleaks locally before pushing. See [`doc
 
 ## Agent / mesh
 
+This cloud workspace is the single Tessera session. The map of the eight repositories, the live sites, and what stays private is [docs/SINGLE-WORKSPACE.md](docs/SINGLE-WORKSPACE.md).
+
 Mesh-agent onboarding stays in Gitbook. Start with the [hybrid consolidation backlog](https://github.com/vitalitychems-dot/Gitbook/blob/main/intake/HYBRID-CONSOLIDATION-BACKLOG.md) and [Gitbook issue #2](https://github.com/vitalitychems-dot/Gitbook/issues/2).
 
 ## Repository organization
