@@ -1,11 +1,11 @@
 import { useEffect, useRef } from "react";
 import { useParams } from "wouter";
 import { useCreateConversation } from "@/hooks/use-conversations";
-import TesseraWorldStage from "@/components/TesseraWorldStage";
+import { ChatArea } from "@/components/ChatArea";
 
 export default function ChatPage() {
   useEffect(() => {
-    document.title = "TESSERA | World";
+    document.title = "TESSERA | Chat";
     const scrollContainer = document.querySelector("[data-scroll-container]");
     if (scrollContainer) scrollContainer.scrollTop = 0;
   }, []);
@@ -24,15 +24,15 @@ export default function ChatPage() {
   }, [conversationId, createConversation]);
 
   return (
-    <div className="flex h-full min-h-0 w-full">
+    <div className="flex h-full min-h-0 w-full bg-[#070b10]" data-testid="chat-page">
       {conversationId && Number.isInteger(conversationId) && conversationId > 0 ? (
-        <TesseraWorldStage conversationId={conversationId} />
+        <ChatArea conversationId={conversationId} />
       ) : (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-[#070b10] p-8 text-center text-[#f3efe6]">
-          <div className="max-w-sm z-10">
-            {isPending && <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-[#7ef0d4]/30 border-t-[#7ef0d4]" aria-label="Starting TESSERA world" />}
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center text-[#f3efe6]">
+          <div className="max-w-sm">
+            {isPending && <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-[#7ef0d4]/30 border-t-[#7ef0d4]" aria-label="Starting chat" />}
             <p className="mt-3 font-mono text-xs text-[#b4bebc]" role={isError ? "alert" : "status"}>
-              {isError ? "TESSERA could not start a conversation." : "Starting TESSERA world…"}
+              {isError ? "TESSERA could not start a conversation." : "Starting chat…"}
             </p>
             {isError && (
               <button

@@ -1,5 +1,4 @@
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
-import LiveSignalsPage from "@/pages/LiveSignalsPage";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -35,6 +34,10 @@ function lazyRetry<T extends { default: React.ComponentType<unknown> }>(
 }
 
 // ---- Surviving canonical pages ----
+const BrainPage = lazyRetry(() => import("@/pages/BrainPage"));
+const EyePage = lazyRetry(() => import("@/pages/EyePage"));
+const MemoryPage = lazyRetry(() => import("@/pages/MemoryPage"));
+const SecretsVaultPage = lazyRetry(() => import("@/pages/SecretsVaultPage"));
 const NotFound = lazyRetry(() => import("@/pages/not-found"));
 const ChatPage = lazyRetry(() => import("@/pages/ChatPage"));
 const LifePage = lazyRetry(() => import("@/pages/LifePage"));
@@ -196,7 +199,6 @@ const REDIRECTS: Array<[string, string]> = [
   ["/living-bible", "/bible"],
   ["/conclusions", "/bible?tab=conclusions"],
   // Knowledge / Society cluster → Secrets
-  ["/secrets", "/secret-society"],
   ["/secret-knowledge", "/secret-society"],
   ["/unified-knowledge", "/secret-society"],
   ["/omniscient-knowledge", "/secret-society"],
@@ -226,7 +228,8 @@ const REDIRECTS: Array<[string, string]> = [
   ["/settings", "/command-center?tab=settings"],
   ["/executor", "/command-center?tab=executor"],
   ["/cross-app", "/sovereignty-roadmap?tab=bridge"],
-  ["/memory-explorer", "/system"],
+  ["/memory-explorer", "/memory"],
+  ["/source-library", "/memory"],
   ["/memory-dashboard", "/system"],
   ["/sovereign-deps", "/system"],
   ["/evolution-health", "/system"],
@@ -262,11 +265,12 @@ function AppRouter() {
         ))}
 
         {/* === CANONICAL ROUTES === */}
-        <Route path="/" component={ChatPage} />
+        <Route path="/">{() => <Redirect to="/chat" />}</Route>
+        <Route path="/chat" component={ChatPage} />
         <Route path="/c/:id" component={ChatPage} />
         <Route path="/life">{() => <LifePage />}</Route>
-        <Route path="/eye">{() => <LiveSignalsPage kind="eye" />}</Route>
-        <Route path="/brain">{() => <LiveSignalsPage kind="brain" />}</Route>
+        <Route path="/eye">{() => <EyePage />}</Route>
+        <Route path="/brain">{() => <BrainPage />}</Route>
         <Route path="/intelligence">{() => <IntelligencePage />}</Route>
         <Route path="/sovereignty-dashboard">{() => <SovereigntyDashboardPage />}</Route>
         <Route path="/sovereignty-readiness">{() => <SovereigntyReadinessPage />}</Route>
@@ -277,6 +281,8 @@ function AppRouter() {
         <Route path="/history">{() => <HistoryPage />}</Route>
 
         {/* Knowledge & Society */}
+        <Route path="/memory">{() => <MemoryPage />}</Route>
+        <Route path="/secrets">{() => <SecretsVaultPage />}</Route>
         <Route path="/secret-society">{() => <SecretsPage />}</Route>
         <Route path="/sovereign-language">{() => <SovereignLanguagePage />}</Route>
         <Route path="/omniversal-lattice">{() => <OmniversalLatticePage />}</Route>

@@ -1,11 +1,11 @@
 - [Next theme integration](tessera-next-integration.md) — verify the Replit-served theme independently of GitHub merges; fonts must not block first paint.
 - [Manus public shares](manus-public-share.md) — reading a public transcript does not grant access to the authenticated Manus collaboration workspace.
 - [TESSERA launch policy](tessera-launch-policy.md) — canonical GitHub source and Gitbook deployment rules; preserve owner gates and protected archives.
-- [Multi-repo beam workflow](tessera-multi-project-topology.md) — keep repositories distinct; Tessera selects context, Combined cold-holds bulk, GitMesh transports selected pieces, Gitbook coordinates, and GitAI stays separate.
+- [Multi-repo beam workflow](tessera-multi-project-topology.md) — keep source, storage, transport, coordination, and GitAI responsibilities separate.
 - [Worker and dependency authority](tessera-worker-governance.md) — models and packages stay least-privilege tools; the owner retains final authority and violations trigger isolation.
 - [Public repository imports](public-repository-imports.md) — check anonymous access before treating a failed GitHub credential as a private-repo problem.
 - [TESSERA live world interface](tessera-design-direction.md) — unify the voxel-inspired Eye, Brain, and Chat using real, clearly sourced live data.
-- [Tessera visual identity](tessera-identity.md) — use the owner's Origin Sigil and portrait traits as the canonical creative brief.
+- [Tessera visual identity](tessera-identity.md) — non-sensitive portrait brief and offline-generation boundary; the private origin mark stays withheld.
 - [TESSERA source provenance](tessera-source-provenance.md) — preserve structured evidence through every factual reply path; ingested metadata cannot promote notes to verified.
 - [Cursor run history](cursor-run-history.md) — batch result reads below the connector's 10 RPS limit; run summaries are not full chat streams.
 - [Mockup scanner dependency policy](mockup-glob-vulnerability.md) — use built-in traversal until a patched braces release or clean alternative is verified.

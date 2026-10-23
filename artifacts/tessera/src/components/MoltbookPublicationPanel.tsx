@@ -206,7 +206,7 @@ export function MoltbookPublicationPanel() {
   const confirmed = posts.filter(post => post.status === "published");
 
   return (
-    <article className="tw-panel tw-forum-card tw-moltbook-publish" data-testid="moltbook-publication-panel" aria-labelledby="moltbook-publish-title">
+    <article className="tw-moltbook-publish rounded-xl border border-border/30 bg-background/40 p-3" data-testid="moltbook-publication-panel" aria-labelledby="moltbook-publish-title">
       <header className="tw-moltbook-publish-heading">
         <div>
           <h3 id="moltbook-publish-title">Owner-reviewed publishing</h3>

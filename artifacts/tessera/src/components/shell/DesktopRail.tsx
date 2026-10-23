@@ -15,7 +15,7 @@ export default function DesktopRail() {
 
   return (
     <aside className="tx-rail" aria-label="Workspace navigation" data-testid="desktop-rail">
-      <Link href="/" className="tx-focus flex items-center gap-3 px-5 h-[60px] border-b" style={{ borderColor: "var(--next-rule)" }} data-testid="link-home">
+      <Link href="/chat" className="tx-focus flex items-center gap-3 px-5 h-[60px] border-b" style={{ borderColor: "var(--next-rule)" }} data-testid="link-home">
         <Mosaic small />
         <span className="tx-display font-bold tracking-[0.2em] text-[15px]">TESSERA</span>
       </Link>

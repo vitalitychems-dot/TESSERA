@@ -1,24 +1,32 @@
 import {
-  Globe2, Eye, Brain, MessageCircle, Orbit, Heart, Shield, Sparkles, BookOpen, KeyRound,
+  Eye, Brain, MessageCircle, Orbit, Heart, Shield, Sparkles, BookOpen, KeyRound,
   ClipboardList, Zap, Search, Hexagon, Truck, Crown, FlaskConical, Terminal, Map, Cpu,
   Workflow, Target, ShoppingCart, Code2, GitCommit, ListOrdered, Gavel, ScrollText,
   Network, BadgeCheck, Wrench, Image, Languages, Layers, Building2, History, Hammer,
-  Atom, LineChart, Scale, type LucideIcon,
+  Atom, LineChart, Scale, Archive, type LucideIcon,
 } from "lucide-react";
 
 export interface NavItem { label: string; href: string; Icon: LucideIcon; also?: string[] }
 export interface NavGroup { id: string; label: string; items: NavItem[] }
 
-/** Four workspace destinations. Forum lives here only. */
+/** Five owner workspace surfaces. Everything else lives in the Index. */
 export const PRIMARY: NavItem[] = [
-  { label: "World", href: "/", Icon: Globe2 },
-  { label: "Eye", href: "/eye", Icon: Eye },
+  { label: "Chat", href: "/chat", Icon: MessageCircle, also: ["/c/"] },
   { label: "Brain", href: "/brain", Icon: Brain },
-  { label: "Forum", href: "/forum", Icon: MessageCircle },
+  { label: "Eye", href: "/eye", Icon: Eye },
+  { label: "Memory", href: "/memory", Icon: Archive },
+  { label: "Secrets", href: "/secrets", Icon: KeyRound },
 ];
 
 /** Every other canonical route, each listed exactly once. */
 export const GROUPS: NavGroup[] = [
+  { id: "core", label: "Core", items: [
+    { label: "System", href: "/system", Icon: Cpu },
+    { label: "Forum", href: "/forum", Icon: MessageCircle },
+    { label: "Gitbook", href: "/gitbook", Icon: ClipboardList },
+    { label: "Code", href: "/code-builder", Icon: Code2 },
+    { label: "Grand Council", href: "/grand-council", Icon: Gavel },
+  ]},
   { id: "mind", label: "Mind", items: [
     { label: "Intelligence", href: "/intelligence", Icon: Sparkles },
     { label: "Nexus", href: "/consciousness-nexus", Icon: Atom },
@@ -34,7 +42,6 @@ export const GROUPS: NavGroup[] = [
     { label: "Gallery", href: "/gallery", Icon: Image },
   ]},
   { id: "council", label: "Council", items: [
-    { label: "Grand Council", href: "/grand-council", Icon: Gavel },
     { label: "Council Ledger", href: "/council-ledger", Icon: ScrollText },
     { label: "Deliberation", href: "/council-vgpu", Icon: Scale },
     { label: "Transcript", href: "/council-transcript", Icon: ScrollText },
@@ -54,15 +61,13 @@ export const GROUPS: NavGroup[] = [
   { id: "knowledge", label: "Knowledge", items: [
     { label: "Bible", href: "/bible", Icon: BookOpen },
     { label: "History", href: "/history", Icon: History },
-    { label: "Society", href: "/secret-society", Icon: KeyRound },
+    { label: "Society archive", href: "/secret-society", Icon: KeyRound },
     { label: "Language", href: "/sovereign-language", Icon: Languages },
-    { label: "Gitbook", href: "/gitbook", Icon: ClipboardList },
     { label: "Codex", href: "/codex", Icon: GitCommit },
     { label: "Build", href: "/build", Icon: Hammer },
   ]},
   { id: "ops", label: "Operations", items: [
     { label: "Command", href: "/command-center", Icon: Terminal },
-    { label: "System", href: "/system", Icon: Cpu },
     { label: "Mesh", href: "/sovereign-mesh", Icon: Network },
     { label: "Proof Center", href: "/proof-center", Icon: BadgeCheck },
     { label: "Rules", href: "/rules", Icon: Scale },
@@ -73,7 +78,6 @@ export const GROUPS: NavGroup[] = [
     { label: "Next Five", href: "/next-five", Icon: ListOrdered },
   ]},
   { id: "code", label: "Code", items: [
-    { label: "Code", href: "/code-builder", Icon: Code2 },
     { label: "SEO", href: "/seo", Icon: Search },
   ]},
 ];

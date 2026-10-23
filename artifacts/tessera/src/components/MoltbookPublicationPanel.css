@@ -1,4 +1,4 @@
-.tw-moltbook-publish { margin-top: 12px; }
+.tw-moltbook-publish { --tw-muted: #9aa4a2; --tw-line: var(--next-rule); --tw-cyan: var(--next-glass); --tw-ink: var(--next-bone); }
 .tw-moltbook-publish-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .tw-moltbook-publish-heading h3 { margin: 0 0 3px; font-size: 11px; font-weight: 700; }
 .tw-moltbook-publish-heading p { margin: 0; color: var(--tw-muted); font-size: 10px; }

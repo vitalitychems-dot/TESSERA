@@ -14,6 +14,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import type { DiscussionTracking, DiscussionVote, KnowledgeFeedEntry, LucideIcon, AsaStatusResponse, TrainingStatusResponse, KnowledgeStatsResponse, KnowledgeFeedResponse } from "@/types/api";
 import { useToast } from "@/hooks/use-toast";
+import { MoltbookPublicationPanel } from "@/components/MoltbookPublicationPanel";
 
 // ─── Forum Heartbeat + Applicants Vetting Panel ──────────────────────────────
 
@@ -1851,6 +1852,9 @@ export default function TesseractForumPage({ embedded }: { embedded?: boolean })
             </div>
 
             <HeartbeatAndApplicantsPanel />
+            <div className="px-3 py-2 border-b border-border/20 shrink-0 max-h-[45vh] overflow-y-auto">
+              <MoltbookPublicationPanel />
+            </div>
 
             {/* Live Stats Banner */}
             <div className="px-3 py-2 border-b border-border/20 shrink-0">

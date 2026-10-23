@@ -4,6 +4,7 @@ import { securityAuditLog } from "@workspace/db/schema";
 import { desc, eq, and, gte } from "drizzle-orm";
 import { getAllowedDomains } from "../lib/secureExternalWrapper";
 import { validateCriticalFiles } from "../lib/checksumValidator";
+import { requireAdminSession } from "../lib/sovereign-admin";
 
 const router: IRouter = Router();
 
@@ -49,6 +50,28 @@ router.get("/security/integrity", async (_req, res) => {
   } catch (err) {
     res.status(500).json({ ok: false, error: (err as Error).message });
   }
+});
+
+const SECRET_INVENTORY = [
+  { key: "TESSERACT_ADMIN_KEY", purpose: "Owner unlock credential", required: true },
+  { key: "SOVEREIGN_SESSION_SECRET", purpose: "Signs owner session cookies", required: true },
+  { key: "SESSION_SECRET", purpose: "Internal provider endpoint HMAC", required: false },
+  { key: "TESSERA_GITHUB_TOKEN", purpose: "GitHub and Gitbook API access", required: false },
+] as const;
+
+router.get("/owner/credentials/status", requireAdminSession, (_req, res) => {
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({
+    ok: true,
+    valuesVisible: false,
+    source: "server environment existence check",
+    credentials: SECRET_INVENTORY.map(({ key, purpose, required }) => ({
+      name: key,
+      purpose,
+      required,
+      configured: Boolean(process.env[key]?.trim()),
+    })),
+  });
 });
 
 export default router;

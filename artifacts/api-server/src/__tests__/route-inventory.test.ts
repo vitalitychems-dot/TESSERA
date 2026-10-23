@@ -259,9 +259,21 @@ describe("route index binding names", () => {
 describe("HYB-012 route inventory", () => {
   const registrations = listRouteRegistrations();
 
-  it("enumerates every mounted module and keeps duplicate registrations", () => {
+  it("enumerates every root-mounted module and keeps duplicate registrations", () => {
     const mounted = listMountedRouteModules();
-    expect(mounted.map((entry) => entry.module).sort()).toEqual(routeModuleFileNames());
+    const intentionallyUnmounted = new Set([
+      // Removed from the served API by the living-person-dossier ruling; the
+      // module remains only for direct unit tests of its generic error shapes.
+      "income-and-leads.ts",
+    ]);
+    const nestedRouteModules = new Set([
+      // Mounted by forum.ts at /tesseract-forum/moltbook-publications.
+      "moltbook-publishing.ts",
+    ]);
+    const expectedRootModules = routeModuleFileNames().filter(
+      (name) => !intentionallyUnmounted.has(name) && !nestedRouteModules.has(name),
+    );
+    expect(mounted.map((entry) => entry.module).sort()).toEqual(expectedRootModules);
     expect(new Set(registrations.map((entry) => entry.module)).size).toBe(mounted.length);
 
     const quantumState = registrations.filter(
@@ -287,9 +299,10 @@ describe("HYB-012 route inventory", () => {
 
   it("records the registration total", () => {
     console.info(`[route-inventory] registration total=${registrations.length}`);
-    // Snapshot includes the read-only Moltbook public-feed route.
+    // Snapshot includes the read-only Moltbook public-feed route, the two
+    // owner-only source-memory routes, and the owner credential-status route.
     // Update when routes are added or removed.
-    expect(registrations.length).toBe(924);
+    expect(registrations.length).toBe(928);
   });
 
   it("allow-lists exactly the current duplicates, including the two ruling entries", () => {
