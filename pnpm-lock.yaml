@@ -180,6 +180,8 @@ overrides:
 
 importers:
 
+  lib/world-sources: {}
+
   .:
     devDependencies:
       prettier:
